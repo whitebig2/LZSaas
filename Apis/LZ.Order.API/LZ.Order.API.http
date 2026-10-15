@@ -1,0 +1,6 @@
+@LZ.Order.API_HostAddress = http://localhost:5038
+
+GET {{LZ.Order.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

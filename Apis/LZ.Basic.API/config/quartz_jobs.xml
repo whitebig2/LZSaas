@@ -1,0 +1,336 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- This file contains job definitions in schema version 2.0 format -->
+<job-scheduling-data xmlns="http://quartznet.sourceforge.net/JobSchedulingData" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.0">
+  <processing-directives>
+    <overwrite-existing-data>true</overwrite-existing-data>
+  </processing-directives>
+  <schedule>
+
+    <job>
+      <name>UserWorkJob</name>
+      <group>UserWorkGroup</group>
+      <description>UserWorkJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.UserWorkJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>UserWorkTrigger</name>
+        <group>UserWorkGroup</group>
+        <job-name>UserWorkJob</job-name>
+        <job-group>UserWorkGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 19 22 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>ClearUseJob</name>
+      <group>ClearUseGroup</group>
+      <description>ClearUseJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.ClearUseJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>ClearUseTrigger</name>
+        <group>ClearUseGroup</group>
+        <job-name>ClearUseJob</job-name>
+        <job-group>ClearUseGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 0 1 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>StatisticsJob</name>
+      <group>StatisticsGroup</group>
+      <description>StatisticsJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.StatisticsJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>StatisticsTrigger</name>
+        <group>StatisticsGroup</group>
+        <job-name>StatisticsJob</job-name>
+        <job-group>StatisticsGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 51 2 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+    <trigger>
+      <cron>
+        <name>StatisticsTrigger2</name>
+        <group>StatisticsGroup</group>
+        <job-name>StatisticsJob</job-name>
+        <job-group>StatisticsGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 0 3 1-7 * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>StaffCancelJob</name>
+      <group>StaffCancelGroup</group>
+      <description>StaffCancelJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.StaffCancelJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>StaffCancelTrigger</name>
+        <group>StaffCancelGroup</group>
+        <job-name>StaffCancelJob</job-name>
+        <job-group>StaffCancelGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 10 1 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>StaffDaysJob</name>
+      <group>StaffDaysGroup</group>
+      <description>StaffDaysJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.StaffDaysJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>StaffDaysTrigger</name>
+        <group>StaffDaysGroup</group>
+        <job-name>StaffDaysJob</job-name>
+        <job-group>StaffDaysGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 10 22 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>StaffLeaveJob</name>
+      <group>StaffLeaveGroup</group>
+      <description>StaffLeaveJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.StaffLeaveJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>StaffLeaveTrigger</name>
+        <group>StaffLeaveGroup</group>
+        <job-name>StaffLeaveJob</job-name>
+        <job-group>StaffLeaveGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 38 15 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>YuXunCall</name>
+      <group>YuXunCallGroup</group>
+      <description>YuXunCallJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.YuXunCall, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>YuXunCallTrigger</name>
+        <group>YuXunCallGroup</group>
+        <job-name>YuXunCall</job-name>
+        <job-group>YuXunCallGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 16 22 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>AliCCCCall</name>
+      <group>AliCCCCallGroup</group>
+      <description>AliCCCCallJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.AliCCCCall, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>AliCCCCallTrigger</name>
+        <group>AliCCCCallGroup</group>
+        <job-name>AliCCCCall</job-name>
+        <job-group>AliCCCCallGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 02 22 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+    
+    <job>
+      <name>YuXunWeiXin</name>
+      <group>YuXunWeiXinGroup</group>
+      <description>YuXunWeiXinJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.YuXunWeiXin, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>YuXunWeiXinTrigger</name>
+        <group>YuXunWeiXinGroup</group>
+        <job-name>YuXunWeiXin</job-name>
+        <job-group>YuXunWeiXinGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 30 10 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>UserMoneyJob</name>
+      <group>UserMoneyJobGroup</group>
+      <description>UserMoneyJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.UserMoneyJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>UserMoneyJobTrigger</name>
+        <group>UserMoneyJobGroup</group>
+        <job-name>UserMoneyJob</job-name>
+        <job-group>UserMoneyJobGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 0 14 * * ?</cron-expression>
+      </cron>
+
+    </trigger>
+
+    <job>
+      <name>CustomerStatisticsJob</name>
+      <group>CustomerStatisticsJobGroup</group>
+      <description>CustomerStatisticsJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.CustomerStatisticsJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>CustomerStatisticsJobTrigger</name>
+        <group>CustomerStatisticsJobGroup</group>
+        <job-name>CustomerStatisticsJob</job-name>
+        <job-group>CustomerStatisticsJobGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 18 22 * * ?</cron-expression>
+      </cron>
+    </trigger>
+    <job>
+      <name>CompanyMessageJob</name>
+      <group>CompanyMessageJobGroup</group>
+      <description>CompanyMessageJob Job for Quartz Server</description>
+      <job-type>LiveCai.Job.CompanyMessageJob, LiveCai.Job</job-type>
+      <durable>true</durable>
+      <recover>false</recover>
+    </job>
+    <trigger>
+      <cron>
+        <name>CompanyMessageJobTrigger</name>
+        <group>CompanyMessageJobGroup</group>
+        <job-name>CompanyMessageJob</job-name>
+        <job-group>CompanyMessageJobGroup</job-group>
+        <misfire-instruction>SmartPolicy</misfire-instruction>
+        <cron-expression>0 0 1 * * ?</cron-expression>
+      </cron>
+    </trigger>
+
+	  <job>
+		  <name>SynchroOAInfoJob</name>
+		  <group>SynchroOAInfoJobGroup</group>
+		  <description>SynchroOAInfoJob Job for Quartz Server</description>
+		  <job-type>LiveCai.Job.SynchroOAInfoJob, LiveCai.Job</job-type>
+		  <durable>true</durable>
+		  <recover>false</recover>
+	  </job>
+	  <trigger>
+		  <cron>
+			  <name>SynchroOAInfoJobTrigger</name>
+			  <group>SynchroOAInfoJobGroup</group>
+			  <job-name>SynchroOAInfoJob</job-name>
+			  <job-group>SynchroOAInfoJobGroup</job-group>
+			  <misfire-instruction>SmartPolicy</misfire-instruction>
+			  <cron-expression>0 57 15 * * ?</cron-expression>
+		  </cron>
+	  </trigger>
+	  
+     <job>
+		  <name>CustomerMonthMoneyJob</name>
+		  <group>CustomerMonthMoneyJobGroup</group>
+		  <description>CustomerMonthMoneyJob Job for Quartz Server</description>
+		  <job-type>LiveCai.Job.CustomerMonthMoneyJob, LiveCai.Job</job-type>
+		  <durable>true</durable>
+		  <recover>false</recover>
+	  </job>
+	  <trigger>
+		  <cron>
+			  <name>CustomerMonthMoneyJobTrigger</name>
+			  <group>CustomerMonthMoneyJobGroup</group>
+			  <job-name>CustomerMonthMoneyJob</job-name>
+			  <job-group>CustomerMonthMoneyJobGroup</job-group>
+			  <misfire-instruction>SmartPolicy</misfire-instruction>
+			  <cron-expression>0 48 17 * * ?</cron-expression>
+		  </cron>
+	  </trigger>
+
+	  <job>
+		  <name>JobMessageJob</name>
+		  <group>JobMessageJobGroup</group>
+		  <description>JobMessageJob Job for Quartz Server</description>
+		  <job-type>LiveCai.Job.JobMessageJob, LiveCai.Job</job-type>
+		  <durable>true</durable>
+		  <recover>false</recover>
+	  </job>
+	  <trigger>
+		  <cron>
+			  <name>JobMessageJobTrigger</name>
+			  <group>JobMessageJobGroup</group>
+			  <job-name>JobMessageJob</job-name>
+			  <job-group>JobMessageJobGroup</job-group>
+			  <misfire-instruction>SmartPolicy</misfire-instruction>
+			  <cron-expression>0 40 13 * * ?</cron-expression>
+		  </cron>
+	  </trigger>
+
+	  <!--<job>
+		  <name>BatchWeiXin</name>
+		  <group>BatchWeiXinGroup</group>
+		  <description>BatchWeiXin Job for Quartz Server</description>
+		  <job-type>LiveCai.Job.BatchWeiXin, LiveCai.Job</job-type>
+		  <durable>true</durable>
+		  <recover>false</recover>
+	  </job>
+	  <trigger>
+		  <cron>
+			  <name>BatchWeiXinTrigger</name>
+			  <group>BatchWeiXinGroup</group>
+			  <job-name>BatchWeiXin</job-name>
+			  <job-group>BatchWeiXinGroup</job-group>
+			  <misfire-instruction>SmartPolicy</misfire-instruction>
+			  <cron-expression>0 53 16 * * ?</cron-expression>
+		  </cron >
+
+	  </trigger>-->
+
+  </schedule>
+</job-scheduling-data>

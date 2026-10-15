@@ -1,0 +1,98 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ output extension=".cs" #>
+<#@ include file="EF.Utility.CS.ttinclude"#>
+
+<#@ assembly name="System.Data.DataSetExtensions.dll" #>
+<#@ import namespace="System.Data" #>
+
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ include file="$(SolutionDir)\Common\LZ.Model\_DB\OutputHelper.ttinclude" #>
+<#@ include file="$(SolutionDir)\Common\LZ.Model\_DB\FinanceDbHelper.ttinclude"  #>
+
+<# //var manager =Manager.Create(Host, GenerationEnvironment);#> 
+
+
+using System;
+using SqlSugar;
+using LZ.Model.Enums;
+namespace LZ.Model
+{	
+<#
+string[] modelBaiscTable = { "Live_V_UserEntry","Live_V_SalaryFailRecord","Live_V_SalaryCashSendRecord","Live_V_PrepaidApplyRecord","Live_V_ContractRecord","Live_V_SalaryDelaySendRecord","Live_V_InjuryInfo" };
+string[] overrideColumn={"PerUserID","UserID","CompanyID","PartnerID","CustomerID","PerPartnerID","CustomerPartnerID"};
+string modelClass="ModelBasic";
+string tableClass="";
+string columnType="";
+foreach(DbTable dbTable in DbHelper.GetDbTables(config.ConnectionString, config.DbDatabase,config.ExpTables))
+{   
+	string item=dbTable.TableName;
+
+	string schemaName="";
+	if(dbTable.TableType.Trim()=="U")
+		schemaName=dbTable.SchemaName;
+	if(schemaName==null)
+		schemaName="";
+	//manager.StartNewFile(item+".cs","");
+	if(modelBaiscTable.Contains(item)){
+	  tableClass=":"+modelClass;
+	}
+	else{
+	tableClass="";
+	}
+	#>
+
+	/// <summary>
+	/// <#=schemaName#> - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class <#=item#><#=tableClass#>
+    {
+		<# 
+		bool iskey=false;
+		foreach(DbColumn column in DbHelper.GetDbColumns(config.ConnectionString, config.DbDatabase, item))  {
+		StringBuilder scolumn=new StringBuilder();
+		
+		if(!column.IsNullable || (column.IsPrimaryKey && !iskey) || column.IsIdentity){
+		   scolumn.Append("[SugarColumn(");
+		   if(!column.IsNullable){
+		      scolumn.Append("IsNullable=false,");
+		   }
+		    if(column.IsPrimaryKey && !iskey){
+		     scolumn.Append("IsPrimaryKey=true,");
+			  iskey=true;
+		   }
+		    if(column.IsIdentity){
+		     scolumn.Append("IsIdentity=true,");
+		   }
+		   scolumn.Length--;
+		   scolumn.Append(")]");
+		}
+		if(overrideColumn.Contains(column.ColumnName) && tableClass!=""){
+	  columnType="override";
+	}
+	else{
+	columnType="";
+	}
+		#>
+
+		/// <summary>
+		/// <#=column.Remark#>
+		/// </summary>		
+		<#=scolumn.ToString()#>
+		public <#=columnType#> <#= column.CSharpType#><#if((column.IsNullable || columnType=="override") && (column.ColumnType=="int" || column.ColumnType=="bool" || column.ColumnType=="float" || column.ColumnType=="decimal" || column.ColumnType=="uniqueidentifier")){#>?<#}#> <#=column.ColumnName#> { get; set; }
+		<#}#>   
+    }
+
+
+<#
+
+//manager.EndBlock();   
+} 
+
+//manager.Process(true);  
+#>
+
+}
+
+

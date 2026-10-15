@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="EventHandler\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\LZ.Common\LZ.Common.csproj" />
+    <ProjectReference Include="..\..\Common\LZ.Core\LZ.Core.csproj" />
+    <ProjectReference Include="..\..\Common\LZ.Model\LZ.Model.csproj" />
+    <ProjectReference Include="..\LZ.ApiService\LZ.ApiService.csproj" />
+  </ItemGroup>
+
+</Project>

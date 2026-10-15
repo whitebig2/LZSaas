@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>df7da935-64f2-4997-9c2b-460d0ca066e2</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..</DockerfileContext>
+    <DockerComposeProjectPath>..\..\docker\docker-compose.dcproj</DockerComposeProjectPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.NodeServices" Version="3.1.32" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\LZ.Common\LZ.Common.csproj" />
+    <ProjectReference Include="..\..\Common\LZ.Core\LZ.Core.csproj" />
+    <ProjectReference Include="..\..\Common\LZ.Model\LZ.Model.csproj" />
+    <ProjectReference Include="..\..\Services\LZ.Clients.Service\LZ.Clients.Service.csproj" />
+  </ItemGroup>
+
+</Project>

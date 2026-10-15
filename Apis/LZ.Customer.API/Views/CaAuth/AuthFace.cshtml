@@ -1,0 +1,98 @@
+﻿@using LZ.Model.Model
+@model CaAuthIdentityViewModel
+@{
+    ViewData["Title"] = "CA认证";
+}
+
+
+<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 border border-gray-100">
+             <div class="mb-6 border-b border-gray-200 pb-4">
+                 <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                     @ViewData["Title"]
+                 </h2>
+                 <p class="mt-1 text-sm text-gray-500">
+                     修改用户个人敏感信息，请仔细核对。
+                 </p>
+             </div>
+
+            <form asp-action="AuthSubmit" method="post" class="space-y-6" >
+                <input type="hidden" asp-for="Id" />
+
+                <div asp-validation-summary="ModelOnly" class="text-red-600 text-sm mb-4 bg-red-50 p-3 rounded border border-red-200"></div>
+
+                <!-- 姓名 -->
+                <div>
+                    <label asp-for="Name" class="block text-sm font-medium text-gray-700"></label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <input asp-for="Name" value="@Model.Name" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="请输入姓名" />
+                    </div>
+                    <span asp-validation-for="Name" class="text-red-600 text-xs mt-1 block"></span>
+                </div>
+
+                <!-- 身份证号码 -->
+                <div>
+                    <label asp-for="IdCardNumber" class="block text-sm font-medium text-gray-700"></label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <input asp-for="IdCardNumber" value="@Model.IdCardNumber" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border font-mono" placeholder="18位身份证号码" />
+                    </div>
+                    <span asp-validation-for="IdCardNumber" class="text-red-600 text-xs mt-1 block"></span>
+                </div>
+
+                <!-- 手机号码 -->
+                <div>
+                    <label asp-for="PhoneNumber" class="block text-sm font-medium text-gray-700"></label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <input asp-for="PhoneNumber" value="@Model.PhoneNumber" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="11位手机号码" />
+                    </div>
+                    <span asp-validation-for="PhoneNumber" class="text-red-600 text-xs mt-1 block"></span>
+                </div>
+
+                <!-- 认证方式 -->
+                <div>
+                    <label asp-for="AuthMethod" class="block text-sm font-medium text-gray-700"></label>
+                    <select asp-for="AuthMethod" value="@Model.AuthMethod" asp-items="@(new SelectList(Model.AvailableAuthMethods))" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md border">
+                    </select>
+                    <span asp-validation-for="AuthMethod" class="text-red-600 text-xs mt-1 block"></span>
+                </div>
+
+                <div>
+         
+
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        <input asp-for="IsApp"  class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" />
+                    </div>
+                    <div class="ml-3 text-sm">
+                            <label asp-for="IsApp" class="font-medium text-gray-700"></label>
+                        <p class="text-gray-500">勾选表示该用户已通过身份验证。</p>
+                    </div>
+                </div>
+
+                <!-- 认证状态 -->
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        <input asp-for="IsAuthenticated" value="@Model.IsAuthenticated" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" />
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label asp-for="IsAuthenticated" class="font-medium text-gray-700"></label>
+                        <p class="text-gray-500">勾选表示该用户已通过身份验证。</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex space-x-3">
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        认证
+                    </button>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        取消
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+

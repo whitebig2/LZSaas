@@ -1,0 +1,6 @@
+@LZ.IM.API_HostAddress = http://localhost:5090
+
+GET {{LZ.IM.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

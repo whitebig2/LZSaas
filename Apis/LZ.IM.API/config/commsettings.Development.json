@@ -1,0 +1,18 @@
+{
+  "Database": {
+    "Main": "server=106.15.126.71,9886;uid=sa;pwd=cur123!@#;database=LZ_Saas;Encrypt=True;TrustServerCertificate=True;"
+  },
+  "Redis": {
+    "ConnectionString": "106.15.126.71:32776,password=123456,defaultDatabase=0"
+  },
+  "RabbitMQ": {
+    "VirtualHost": "lz-virtual",
+    "Username": "lz",
+    "Password": "123456",
+    "HostName": "106.15.126.71",
+    "Port": 32770,
+    "ClientName": "lz-lqm",
+    "ExchangeName": "lqm_exchange",
+    "QueueName": "lqm_queue"
+  }
+}
