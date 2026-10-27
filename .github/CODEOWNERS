@@ -1,0 +1,20 @@
+# CODEOWNERS - 代码审核归属定义
+# 规则：越靠后优先级越高；两人中任意一人 approve 即满足 Code Owners 要求
+# 生效前提：Rulesets 中勾选 "Require review from Code Owners"
+
+# 默认：所有代码改动由两位审核人把关
+*                             @livecai @TheAcmeGit
+
+# 高危配置文件（含连接串/凭据，必须严审）
+**/commsettings.json          @livecai @TheAcmeGit
+**/appsettings*.json          @livecai @TheAcmeGit
+**/*.config                   @livecai @TheAcmeGit
+docker-compose.yml            @livecai @TheAcmeGit
+docker/                       @livecai @TheAcmeGit
+dapr/                         @livecai @TheAcmeGit
+
+# 数据库脚本（建表/索引/数据变更，影响生产）
+**/*.sql                      @livecai @TheAcmeGit
+
+# CI/CD 与平台配置
+.github/                      @livecai @TheAcmeGit

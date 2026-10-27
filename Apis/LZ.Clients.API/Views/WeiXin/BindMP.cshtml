@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>绑定公众号</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="renderer" content="webkit" />
+    <meta name="viewport" content="width=device-width, initial-scale=1,maximum-scale=1" />
+    <meta name="title" content="" />
+    <meta name="keywords" content="" />
+    <meta name="description" content="" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta content="yes" name="apple-mobile-web-app-capable" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.3.2.js"></script>
+
+
+</head>
+
+<body>
+    <script>
+         var openid = '@ViewBag.OpenID'
+         var toPage = '@ViewBag.ToPage'
+         if(toPage && toPage.length>0){
+             wx.miniProgram.switchTab({ url: toPage});
+         }
+         else{
+             wx.miniProgram.navigateBack({delta: 2});
+         }
+        
+        //wx.miniProgram.navigateBack({delta: 2});
+        if (openid != '') {
+            alert('绑定成功！')
+        } else {
+            alert('绑定失败！')
+        }
+    </script>
+</body>
+
+</html>

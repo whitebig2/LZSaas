@@ -1,0 +1,172 @@
+using SqlSugar;
+
+namespace LZ.Model
+{
+    /// <summary>
+    /// 用户画像快照 - 实体层
+    /// 注意：本文件为手写实体（对应 2026-10 人岗匹配离线物化表）。
+    /// T4 模板重新生成 Entity.cs 包含本表后，请删除本文件避免重复定义。
+    /// 字段如与实际建表有出入，直接修改本文件属性名即可。
+    /// </summary>
+    [Serializable]
+    [TenantAttribute("Main")]
+    public partial class Live_UserProfile
+    {
+        [SugarColumn(IsNullable = false, IsPrimaryKey = true)]
+        public int UserID { get; set; }
+
+        public int? CompanyID { get; set; }
+
+        /// <summary>
+        /// 工种偏好 JSON：{"EntryJobID":score}
+        /// </summary>
+        public string WorkTypePrefs { get; set; }
+
+        /// <summary>
+        /// 前3工种名（展示用，逗号分隔）
+        /// </summary>
+        public string WorkTypeTop { get; set; }
+
+        /// <summary>
+        /// 类目偏好 JSON：{"JobClassID":score}（含父类上卷）
+        /// </summary>
+        public string CatePrefs { get; set; }
+
+        /// <summary>
+        /// 行为推断的薪资心理价位
+        /// </summary>
+        public decimal? SalaryLevel { get; set; }
+
+        /// <summary>
+        /// 班次偏好 JSON（预留）
+        /// </summary>
+        public string ShiftPrefs { get; set; }
+
+        /// <summary>
+        /// 到岗率信誉分 0~1
+        /// </summary>
+        public decimal? CredibilityScore { get; set; }
+
+        public int HiredCount { get; set; }
+
+        public int AppliedCount { get; set; }
+
+        /// <summary>
+        /// 秒退次数（<3天）
+        /// </summary>
+        public int QuickLeaveCount { get; set; }
+
+        /// <summary>
+        /// 平均在岗天数（已离职记录均值）
+        /// </summary>
+        public decimal? AvgStayDays { get; set; }
+
+        /// <summary>
+        /// 常干工种风险级众数（3类/4类/5类）
+        /// </summary>
+        public string RiskClassMode { get; set; }
+
+        /// <summary>
+        /// 求职状态：0未知 1在职稳定 2在职看机会 3求职中 4沉默
+        /// </summary>
+        public byte SeekStatus { get; set; }
+
+        /// <summary>
+        /// 流动性：NULL未知 1稳定型(均岗≥90天) 2流动型(<30天)
+        /// </summary>
+        public byte? MobilityType { get; set; }
+
+        /// <summary>
+        /// 最近一次行为时间（状态判定输入）
+        /// </summary>
+        public DateTime? LastBehaviorTime { get; set; }
+
+        /// <summary>
+        /// 最近一次入职工种名
+        /// </summary>
+        public string LastEntryWorkName { get; set; }
+
+        /// <summary>
+        /// 本行计算时间（过期判断）
+        /// </summary>
+        public DateTime? LastCalcTime { get; set; }
+
+        /// <summary>
+        /// 批次号
+        /// </summary>
+        public long CalcVersion { get; set; }
+    }
+
+    /// <summary>
+    /// 岗位候选人清单（物化） - 实体层
+    /// 注意：本文件为手写实体（对应 2026-10 人岗匹配离线物化表）。
+    /// T4 模板重新生成 Entity.cs 包含本表后，请删除本文件避免重复定义。
+    /// </summary>
+    [Serializable]
+    [TenantAttribute("Main")]
+    public partial class Live_JobCandidatePool
+    {
+        [SugarColumn(IsNullable = false, IsPrimaryKey = true)]
+        public int JobID { get; set; }
+
+        [SugarColumn(IsNullable = false, IsPrimaryKey = true)]
+        public int UserID { get; set; }
+
+        /// <summary>
+        /// 离线总分（亲和+信誉+地理+薪资+期望+证书全维度）
+        /// </summary>
+        public decimal Score { get; set; }
+
+        /// <summary>
+        /// 岗位内名次（1 起，按 Score 降序）
+        /// </summary>
+        public int Rank { get; set; }
+
+        /// <summary>
+        /// 分维度明细 JSON
+        /// </summary>
+        public string ScoreDetail { get; set; }
+
+        /// <summary>
+        /// 命中的工种名
+        /// </summary>
+        public string WorkTypeHit { get; set; }
+
+        /// <summary>
+        /// 到岗率信誉快照
+        /// </summary>
+        public decimal? CredibilityScore { get; set; }
+
+        /// <summary>
+        /// 求职状态快照
+        /// </summary>
+        public byte? SeekStatus { get; set; }
+
+        /// <summary>
+        /// 距离快照（计算时有坐标则填）
+        /// </summary>
+        public string DistanceText { get; set; }
+
+        /// <summary>
+        /// 最近入职工种名
+        /// </summary>
+        public string LastEntryWorkName { get; set; }
+
+        /// <summary>
+        /// 证书匹配：0无要求 1要求且持证
+        /// </summary>
+        public byte CertMatch { get; set; }
+
+        /// <summary>
+        /// 夜批批次号（实时触发行为 0，夜批清理时统一覆盖）
+        /// </summary>
+        public long BatchID { get; set; }
+
+        public DateTime? CalcTime { get; set; }
+
+        /// <summary>
+        /// 0=夜间批 1=岗位发布/修改实时触发
+        /// </summary>
+        public byte SourceType { get; set; }
+    }
+}

@@ -1,0 +1,21 @@
+{
+  "profiles": {
+    "Docker Compose": {
+      "commandName": "DockerCompose",
+      "commandVersion": "1.0",
+      "composeLaunchAction": "LaunchBrowser",
+      "composeLaunchServiceName": "lz.basic.api",
+      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}/swagger",
+      "serviceActions": {
+        "lz.company.api": "StartDebugging",
+        "lz.users.api": "StartDebugging",
+        "lz.gateway": "StartDebugging",
+        "lz.clients.api": "StartDebugging",
+        "lz.customer.api": "StartDebugging",
+        "lz.finance.api": "StartDebugging",
+        "lz.statistics.api": "StartDebugging",
+        "lz.basic.api": "StartDebugging"
+      }
+    }
+  }
+}

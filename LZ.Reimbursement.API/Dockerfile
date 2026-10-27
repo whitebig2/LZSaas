@@ -1,0 +1,34 @@
+# 请参阅 https://aka.ms/customizecontainer 以了解如何自定义调试容器，以及 Visual Studio 如何使用此 Dockerfile 生成映像以更快地进行调试。
+
+# 此阶段用于在快速模式(默认为调试配置)下从 VS 运行时
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER $APP_UID
+WORKDIR /app
+EXPOSE 8080
+
+
+# 此阶段用于生成服务项目
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["LZ.Reimbursement.API/LZ.Reimbursement.API.csproj", "LZ.Reimbursement.API/"]
+COPY ["Common/LZ.Core/LZ.Core.csproj", "Common/LZ.Core/"]
+COPY ["Common/LZ.Common/LZ.Common.csproj", "Common/LZ.Common/"]
+COPY ["Common/LZ.Model/LZ.Model.csproj", "Common/LZ.Model/"]
+COPY ["Services/LZ.Finance.Service/LZ.Finance.Service.csproj", "Services/LZ.Finance.Service/"]
+COPY ["Services/LZ.ApiService/LZ.ApiService.csproj", "Services/LZ.ApiService/"]
+RUN dotnet restore "./LZ.Reimbursement.API/LZ.Reimbursement.API.csproj"
+COPY . .
+WORKDIR "/src/LZ.Reimbursement.API"
+RUN dotnet build "./LZ.Reimbursement.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# 此阶段用于发布要复制到最终阶段的服务项目
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./LZ.Reimbursement.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# 此阶段在生产中使用，或在常规模式下从 VS 运行时使用(在不使用调试配置时为默认值)
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "LZ.Reimbursement.API.dll"]

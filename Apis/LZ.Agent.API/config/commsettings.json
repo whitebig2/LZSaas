@@ -1,0 +1,21 @@
+{
+  "Database": {
+    "Main": "server=106.15.126.71,9886;uid=sa;pwd=cur123!@#;database=LZ_Saas;Encrypt=True;TrustServerCertificate=True;",
+    "Shop": "server=106.15.126.71,9886;uid=sa;pwd=cur123!@#;database=LZ_SaasShop;Encrypt=True;TrustServerCertificate=True;",
+    "Agent": "server=106.15.126.71,9886;uid=sa;pwd=cur123!@#;database=LZ_Agent;Encrypt=True;TrustServerCertificate=True;"
+  },
+  "Redis": {
+    "ConnectionString": "8.153.194.13:26739,password=YKfXcxTsZcWpsMHG,defaultDatabase=0"
+  },
+  "RabbitMQ": {
+    "VirtualHost": "lz-virtual",
+    "Username": "lz",
+    "Password": "123456",
+    "HostName": "8.153.194.13",
+    "Port": 9885,
+    "ClientName": "lz-lqm",
+    "ExchangeName": "lqm_exchange",
+    "QueueName": "lqm_queue"
+  }
+
+}

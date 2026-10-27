@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="uploadfiles\**" />
+    <Content Remove="uploadfiles\**" />
+    <EmbeddedResource Remove="uploadfiles\**" />
+    <None Remove="uploadfiles\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Program - 复制.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\LZ.Common\LZ.Common.csproj" />
+    <ProjectReference Include="..\..\Common\LZ.Core\LZ.Core.csproj" />
+    <ProjectReference Include="..\..\Common\LZ.Model\LZ.Model.csproj" />
+    <ProjectReference Include="..\..\Services\LZ.ApiService\LZ.ApiService.csproj" />
+    <ProjectReference Include="..\..\Services\LZ.Users.Service\LZ.Users.Service.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+</Project>

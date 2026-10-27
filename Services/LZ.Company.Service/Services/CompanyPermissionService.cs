@@ -1,0 +1,42 @@
+﻿using LZ.Company.Service.Interface;
+using LZ.Core.Interface;
+using LZ.Core.Redis;
+using LZ.Model;
+using SqlSugar;
+using SqlSugar.IOC;
+
+namespace LZ.Company.Service.Services
+{
+    public class CompanyPermissionService(IPermissionService permissionService) : ICompanyPermissionService, IScopedDependency
+    {
+        /// <summary>
+        /// 判断是否存在该权限
+        /// </summary>
+        /// <param name="number"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public async Task<bool> License(string number, string action, int uid)
+        {
+            var models = await permissionService.CompanyRoles(uid);
+            return models.Exists(it => it.Actions != null && it.Actions.Contains(action) && it.PermissionId == number);
+        }
+
+        /// <summary>
+        /// 判断是否存在该权限
+        /// </summary>
+        /// <param name="number"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public async Task<List<bool>> LicenseList(string number, string action, int uid)
+        {
+            var models = await permissionService.CompanyRoles(uid);
+            string[] ops = action.Split(',');
+            List<bool> b = new List<bool>();
+            foreach (var op in ops)
+            {
+                b.Add(models.Exists(it => it.Actions != null && it.PermissionId == number && it.Actions.Contains(op)));
+            }
+            return b;
+        }
+    }
+}

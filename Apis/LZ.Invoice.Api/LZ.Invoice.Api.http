@@ -1,0 +1,6 @@
+@LZ.Invoice.Api_HostAddress = http://localhost:5146
+
+GET {{LZ.Invoice.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

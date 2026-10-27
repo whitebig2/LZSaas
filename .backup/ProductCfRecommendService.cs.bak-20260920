@@ -1,0 +1,597 @@
+using LZ.Core;
+using LZ.Core.Interface;
+using LZ.Model;
+using LZ.Model.Enums;
+using LZ.Model.PagedModel;
+using LZ.Product.Service.Interface;
+using SqlSugar;
+using System.Linq.Expressions;
+
+namespace LZ.Product.Service.Services
+{
+    /// <summary>
+    /// 基于用户购买(Shop_Order/Shop_OrderItems) + 加购(Shop_ShoppingCart) + 访问记录(Shop_Visit)
+    /// 的 Item-CF 协同过滤推荐服务。
+    ///
+    /// 算法流程：
+    /// 1. 兴趣种子：用户近 30 天访问(权重1.0,7天半衰期) + 加购(权重5.0,14天半衰期)
+    ///    + 近 90 天购买(权重8.0,30天半衰期，订单状态 2~7 即已付款及以后)，均带时间衰减
+    ///    （加购按 CreateTime 衰减，历史存量行 CreateTime 为 NULL 时按 0.3 档保守处理），
+    ///    取兴趣分最高的前 10 个商品为种子；
+    /// 2. Item-CF 召回：找近期对种子商品有过加购/访问的其他用户(协同用户)，
+    ///    构建协同用户的 用户-物品 矩阵，计算种子与候选物品的余弦相似度(共现用户数>=2 防噪声)，
+    ///    cf(c) = Σ interest(种子) × sim(种子, c)；
+    /// 3. 内容分：候选商品与种子商品的分类(CateID/CateIDS)重合度；
+    /// 4. 混合排序：final = 0.65×CF + 0.30×内容 + 0.05×热度(近30天浏览量)；
+    /// 5. 个人行为置顶：列表页优先展示本人最近查看/购买/加购过的商品（按最近交互时间倒序，
+    ///    置顶数量不超过一页），其后为 Item-CF 推荐结果；详情页相关推荐(ProductID 场景)不置顶；
+    /// 6. 业务规则：推荐主体排除用户已交互过的商品(已置顶展示)、库存为 0 的商品；冷启动(无行为)降级为热度榜。
+    /// </summary>
+    public class ProductCfRecommendService : ServicesBase<Shop_Product>, IProductCfRecommendService, IScopedDependency
+    {
+        // ===== 行为权重 =====
+        private const double VisitBaseWeight = 1.0;   // 单次访问基础权重
+        private const double CartWeight = 5.0;        // 加购基础权重
+        private const double PurchaseWeight = 8.0;    // 购买基础权重（最强意图信号）
+
+        // ===== 时间窗口 =====
+        private const int BehaviorWindowDays = 30;    // 用户自身访问行为窗口
+        private const int PurchaseWindowDays = 90;    // 购买行为窗口（兴趣种子）
+        private const int CoWindowDays = 90;          // 协同用户行为窗口
+        private const int PopularityWindowDays = 30;  // 热度统计窗口（近 30 天浏览量）
+        private const double VisitHalfLifeDays = 7.0; // 访问兴趣半衰期
+        private const double CartHalfLifeDays = 14.0; // 加购兴趣半衰期（加购意图更持久，衰减更慢）
+        private const double PurchaseHalfLifeDays = 30.0; // 购买兴趣半衰期（已形成转化，兴趣最持久）
+        private const double CartUnknownAgeFactor = 0.3; // 存量行无 CreateTime 时的保守权重档（相当于月级旧数据）
+
+        // ===== 置顶配置 =====
+        private const int MaxPinnedItems = 20;        // 个人行为置顶数量上限
+
+        // ===== CF 计算规模控制 =====
+        private const int MaxSeeds = 10;              // 种子商品数上限
+        private const int MaxCoUsers = 300;           // 协同用户数上限
+        private const int MinCoUsers = 2;             // 物品对最小共现用户数（防噪声）
+
+        // ===== 混合权重 =====（销量仅作轻微破冰信号，个性化优先）
+        private const double WeightCf = 0.65;
+        private const double WeightContent = 0.30;
+        private const double WeightPopularity = 0.05;
+
+        public async Task<List<Shop_Product>> List(Expression<Func<Shop_Product, bool>> exp, ProductPagedModel query, int userId, int companyId)
+        {
+            var expable = Expressionable.Create<Shop_Product>();
+            if (exp != null)
+            {
+                expable.And(exp);
+            }
+
+            if (!query.Status.HasValue)
+            {
+                expable.And(it => it.Status == (int)ProductStatus.List);
+            }
+
+            // 分类过滤（支持 CID 取子分类，或以 ProductID 所在分类反查同类）
+            var cateIds = await ResolveCateIds(query, companyId);
+            if (cateIds.Count > 0)
+            {
+                ApplyCateFilter(expable, cateIds);
+            }
+
+            // 详情页相关推荐场景：排除当前商品自身
+            if (query.ProductID.HasValue)
+            {
+                var excludeId = query.ProductID.Value;
+                expable.And(it => it.ProductID != excludeId);
+            }
+
+            // 排除库存为 0 的商品（null 视为不限库存）
+            expable.And(it => it.ProductCount == null || it.ProductCount > 0);
+
+            var candidates = await Context.Queryable<Shop_Product>()
+                .Where(expable.ToExpression())
+                .Select(it => new CandidateProduct
+                {
+                    ProductID = it.ProductID,
+                    CateID = it.CateID,
+                    CateIDS = it.CateIDS,
+                    ProductCount = it.ProductCount
+                })
+                .ToListAsync();
+
+            if (candidates.Count == 0)
+            {
+                query.Count = 0;
+                return [];
+            }
+
+            var now = DateTime.Now;
+
+            // 热度信号：候选商品近 30 天浏览量（代替累计销量，避免老爆款长期霸榜）
+            var visitCounts = await GetRecentVisitCounts(candidates.Select(it => it.ProductID).ToList(), companyId, now);
+
+            // ① 用户兴趣种子与行为轨迹（购买 + 加购 + 访问）
+            var profile = await GetUserProfile(userId, companyId, now);
+
+            List<RankedProduct> ranked;
+            if (profile.Interest.Count == 0)
+            {
+                // 冷启动：无任何行为 → 热度榜兜底
+                ranked = ShuffleRanked(RankByPopularity(candidates, visitCounts), query);
+            }
+            else if (query.ProductID.HasValue)
+            {
+                // 详情页相关推荐场景：只出相似商品（排除本人已交互商品），不置顶行为商品
+                ranked = ShuffleRanked(
+                    await RankByCfAndContent(candidates, profile.Interest, visitCounts, userId, companyId, now),
+                    query);
+            }
+            else
+            {
+                // 推荐主体：Item-CF + 内容混合（排除本人已交互商品，已交互商品置顶展示）
+                var tail = ShuffleRanked(
+                    await RankByCfAndContent(candidates, profile.Interest, visitCounts, userId, companyId, now),
+                    query);
+
+                // 个人行为置顶：本人最近查看/购买/加购的商品优先展示，按最近交互时间倒序
+                var pinned = BuildPinnedRecent(candidates, profile, query);
+                ranked = pinned.Concat(tail).ToList();
+            }
+
+            query.Count = ranked.Count;
+
+            // 内存分页（Page==0 返回全量，沿用现有约定）
+            List<int> pageIds;
+            if (query.Page == 0)
+            {
+                pageIds = ranked.Select(it => it.ProductID).ToList();
+            }
+            else
+            {
+                var page = query.Page < 1 ? 1 : query.Page;
+                var pageSize = query.PageSize < 1 ? 15 : query.PageSize;
+                pageIds = ranked.Skip((page - 1) * pageSize).Take(pageSize).Select(it => it.ProductID).ToList();
+            }
+
+            if (pageIds.Count == 0)
+            {
+                return [];
+            }
+
+            var products = await Context.Queryable<Shop_Product>()
+                .Where(it => pageIds.Contains(it.ProductID))
+                .ToListAsync();
+            return pageIds
+                .Select(id => products.Find(p => p.ProductID == id))
+                .Where(it => it != null)
+                .Select(it => it!)
+                .ToList();
+        }
+
+        /// <summary>用户兴趣分：productId -> 加权兴趣分（访问带时间衰减，加购固定权重）</summary>
+        private async Task<Dictionary<int, double>> GetUserInterest(int userId, int companyId, DateTime now)
+        {
+            if (userId <= 0)
+            {
+                return [];
+            }
+
+            var from = now.AddDays(-BehaviorWindowDays);
+
+            // 近 30 天商品访问记录
+            var visits = await Context.Queryable<Shop_Visit>()
+                .Where(it => it.UserID == userId
+                    && it.CompanyID == companyId
+                    && it.FromType == (int)VisitFromType.Product
+                    && it.ProductID.HasValue
+                    && it.StartTime >= from)
+                .Select(it => new { it.ProductID, it.StartTime, it.CreateTime, it.Seconds })
+                .ToListAsync();
+
+            // 加购记录（按 CreateTime 做时间衰减，历史存量行 CreateTime 为 NULL 按 0.3 档）
+            var carts = await Context.Queryable<Shop_ShoppingCart>()
+                .Where(it => it.UserID == userId && it.ProductID.HasValue)
+                .Select(it => new { it.ProductID, it.CreateTime })
+                .ToListAsync();
+
+            var interest = new Dictionary<int, double>();
+            foreach (var visit in visits)
+            {
+                var pid = visit.ProductID!.Value;
+                var start = visit.StartTime ?? visit.CreateTime ?? now;
+                var decay = Math.Pow(0.5, (now - start).TotalDays / VisitHalfLifeDays);   // 7 天半衰期
+                var seconds = visit.Seconds ?? 10;
+                var duration = Math.Max(Math.Min(seconds / 30d, 3d), 0.5);                // 停留时长系数
+                interest[pid] = interest.GetValueOrDefault(pid) + VisitBaseWeight * decay * duration;
+            }
+            foreach (var cart in carts)
+            {
+                var pid = cart.ProductID!.Value;
+                interest[pid] = interest.GetValueOrDefault(pid) + CartWeight * CartTimeFactor(cart.CreateTime, now);
+            }
+            return interest;
+        }
+
+        /// <summary>
+        /// 加购时间衰减因子：14 天半衰期；存量行 CreateTime 为 NULL 时按 0.3 档保守处理
+        /// （无法判断新旧，按"月级旧数据"对待，避免旧加购长期霸占兴趣种子）。
+        /// </summary>
+        private static double CartTimeFactor(DateTime? createTime, DateTime now)
+        {
+            if (!createTime.HasValue)
+            {
+                return CartUnknownAgeFactor;
+            }
+            return Math.Pow(0.5, (now - createTime.Value).TotalDays / CartHalfLifeDays);
+        }
+
+        /// <summary>Item-CF + 内容相似混合排序</summary>
+        private async Task<List<RankedProduct>> RankByCfAndContent(List<CandidateProduct> candidates, Dictionary<int, double> interest, Dictionary<int, int> visitCounts, int userId, int companyId, DateTime now)
+        {
+            var candidateIds = candidates.Select(it => it.ProductID).ToHashSet();
+            // 已交互过的商品不再推荐（已看/已加购）
+            var interacted = interest.Keys.ToHashSet();
+
+            // 兴趣分最高的前 N 个商品作为 CF 种子
+            var seeds = interest.OrderByDescending(it => it.Value).Take(MaxSeeds).Select(it => it.Key).ToList();
+            var seedSet = seeds.ToHashSet();
+
+            // ② 找协同用户：近期对种子商品有过访问/加购的其他用户
+            var coUsers = await FindCoUsers(seeds, userId, companyId, now);
+
+            // ③ 协同用户的 用户-物品 行为矩阵（限定在候选商品域内）
+            var cfScores = coUsers.Count == 0
+                ? []
+                : await ComputeCfScores(seeds, seedSet, interest, coUsers, candidateIds, companyId, now);
+
+            // ④ 内容分：种子商品分类集合
+            var seedProducts = await Context.Queryable<Shop_Product>()
+                .Where(it => seeds.Contains(it.ProductID))
+                .Select(it => new { it.CateID, it.CateIDS })
+                .ToListAsync();
+            var seedCateIds = seedProducts
+                .SelectMany(it => ParseCateIds(it.CateID, it.CateIDS))
+                .ToHashSet();
+
+            // ⑤ 混合打分（热度 = 近 30 天浏览量对数归一）
+            double maxCf = cfScores.Count > 0 ? cfScores.Values.Max() : 0;
+            double maxPop = candidates.Count > 0 ? candidates.Max(it => Math.Log(1 + visitCounts.GetValueOrDefault(it.ProductID))) : 0;
+            var hasCfSignal = cfScores.Count > 0;
+            var wCf = hasCfSignal ? WeightCf : 0;
+            var wContent = hasCfSignal ? WeightContent : WeightContent + WeightCf / 2;
+            var wPop = hasCfSignal ? WeightPopularity : WeightPopularity + WeightCf / 2;
+
+            var ranked = new List<RankedProduct>(candidates.Count);
+            foreach (var candidate in candidates)
+            {
+                if (interacted.Contains(candidate.ProductID))
+                {
+                    continue;
+                }
+
+                var cf = maxCf > 0 ? cfScores.GetValueOrDefault(candidate.ProductID) / maxCf : 0;
+                var cateOverlap = ParseCateIds(candidate.CateID, candidate.CateIDS).Count(seedCateIds.Contains);
+                var content = Math.Min(cateOverlap, 2) / 2d;
+                var pop = maxPop > 0 ? Math.Log(1 + visitCounts.GetValueOrDefault(candidate.ProductID)) / maxPop : 0;
+
+                ranked.Add(new RankedProduct
+                {
+                    ProductID = candidate.ProductID,
+                    Score = wCf * cf + wContent * content + wPop * pop
+                });
+            }
+
+            if (ranked.Count == 0)
+            {
+                // 种子已覆盖全部候选（小商品池）→ 退化为热度榜
+                return RankByPopularity(candidates, visitCounts);
+            }
+
+            return ranked
+                .OrderByDescending(it => it.Score)
+                .ThenBy(it => it.ProductID)
+                .ToList();
+        }
+
+        /// <summary>协同用户：近期访问或加购过种子商品的其他用户（去重，限上限）</summary>
+        private async Task<List<int>> FindCoUsers(List<int> seeds, int userId, int companyId, DateTime now)
+        {
+            var coFrom = now.AddDays(-CoWindowDays);
+
+            var visitUsers = await Context.Queryable<Shop_Visit>()
+                .Where(it => it.FromType == (int)VisitFromType.Product
+                    && it.ProductID.HasValue
+                    && it.UserID.HasValue && it.UserID > 0 && it.UserID != userId
+                    && it.CompanyID == companyId
+                    && seeds.Contains(it.ProductID.Value)
+                    && it.StartTime >= coFrom)
+                .Select(it => it.UserID.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var cartUsers = await Context.Queryable<Shop_ShoppingCart>()
+                .Where(it => it.UserID.HasValue && it.UserID > 0 && it.UserID != userId
+                    && it.ProductID.HasValue
+                    && seeds.Contains(it.ProductID.Value))
+                .Select(it => it.UserID.Value)
+                .Distinct()
+                .ToListAsync();
+
+            return visitUsers
+                .Concat(cartUsers)
+                .Distinct()
+                .Take(MaxCoUsers)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Item-CF 打分：基于协同用户行为矩阵计算 种子→候选 物品余弦相似度，
+        /// cf(c) = Σ_seed interest(seed) × cos(seed, c)，共现用户数不足 MinCoUsers 的物品对丢弃。
+        /// </summary>
+        private async Task<Dictionary<int, double>> ComputeCfScores(List<int> seeds, HashSet<int> seedSet, Dictionary<int, double> interest, List<int> coUsers, HashSet<int> candidateIds, int companyId, DateTime now)
+        {
+            var coFrom = now.AddDays(-CoWindowDays);
+            var candidateIdList = candidateIds.ToList();
+
+            // 协同用户在候选商品域内的访问与加购行为
+            var coVisits = await Context.Queryable<Shop_Visit>()
+                .Where(it => it.FromType == (int)VisitFromType.Product
+                    && it.ProductID.HasValue
+                    && it.UserID.HasValue
+                    && it.CompanyID == companyId
+                    && it.StartTime >= coFrom
+                    && coUsers.Contains(it.UserID.Value)
+                    && candidateIdList.Contains(it.ProductID.Value))
+                .Select(it => new { it.UserID, it.ProductID })
+                .ToListAsync();
+
+            var coCarts = await Context.Queryable<Shop_ShoppingCart>()
+                .Where(it => it.UserID.HasValue
+                    && it.ProductID.HasValue
+                    && coUsers.Contains(it.UserID.Value)
+                    && candidateIdList.Contains(it.ProductID.Value))
+                .Select(it => new { it.UserID, it.ProductID, it.CreateTime })
+                .ToListAsync();
+
+            // 构建 用户-物品 矩阵：userId -> (productId -> 行为分)
+            var matrix = new Dictionary<int, Dictionary<int, double>>();
+            void AddBehavior(int userId2, int productId, double weight)
+            {
+                if (!matrix.TryGetValue(userId2, out var userItems))
+                {
+                    matrix[userId2] = userItems = new Dictionary<int, double>();
+                }
+                userItems[productId] = userItems.GetValueOrDefault(productId) + weight;
+            }
+
+            foreach (var row in coVisits)
+            {
+                AddBehavior(row.UserID!.Value, row.ProductID!.Value, VisitBaseWeight);
+            }
+            foreach (var row in coCarts)
+            {
+                AddBehavior(row.UserID!.Value, row.ProductID!.Value, CartWeight * CartTimeFactor(row.CreateTime, now));
+            }
+
+            if (matrix.Count == 0)
+            {
+                return [];
+            }
+
+            // 物品向量模长：‖item‖ = √(Σ 用户行为分²)
+            var itemNorms = new Dictionary<int, double>();
+            foreach (var userItems in matrix.Values)
+            {
+                foreach (var (productId, score) in userItems)
+                {
+                    itemNorms[productId] = Math.Sqrt(Math.Pow(itemNorms.GetValueOrDefault(productId), 2) + score * score);
+                }
+            }
+
+            // 种子×候选 的点积累加与共现用户数统计
+            var dots = new Dictionary<int, Dictionary<int, double>>();       // seed -> candidate -> Σ r_u,seed × r_u,cand
+            var pairUsers = new Dictionary<(int Seed, int Candidate), int>(); // 物品对共现用户数
+
+            foreach (var userItems in matrix.Values)
+            {
+                var hitSeeds = new List<int>();
+                foreach (var seed in seeds)
+                {
+                    if (userItems.ContainsKey(seed))
+                    {
+                        hitSeeds.Add(seed);
+                    }
+                }
+                if (hitSeeds.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (var (productId, score) in userItems)
+                {
+                    if (seedSet.Contains(productId) || !candidateIds.Contains(productId))
+                    {
+                        continue;
+                    }
+                    foreach (var seed in hitSeeds)
+                    {
+                        if (!dots.TryGetValue(seed, out var seedDots))
+                        {
+                            dots[seed] = seedDots = new Dictionary<int, double>();
+                        }
+                        seedDots[productId] = seedDots.GetValueOrDefault(productId) + userItems[seed] * score;
+                        var pair = (seed, productId);
+                        pairUsers[pair] = pairUsers.GetValueOrDefault(pair) + 1;
+                    }
+                }
+            }
+
+            // cf(c) = Σ_seed interest(seed) × dot(seed,c) / (‖seed‖×‖c‖)
+            var cfScores = new Dictionary<int, double>();
+            foreach (var (seed, seedDots) in dots)
+            {
+                var seedNorm = itemNorms.GetValueOrDefault(seed, 1);
+                var seedInterest = interest.GetValueOrDefault(seed);
+                foreach (var (candidate, dot) in seedDots)
+                {
+                    if (pairUsers.GetValueOrDefault((seed, candidate)) < MinCoUsers)
+                    {
+                        continue;
+                    }
+                    var candidateNorm = itemNorms.GetValueOrDefault(candidate, 1);
+                    var similarity = dot / (seedNorm * candidateNorm);
+                    cfScores[candidate] = cfScores.GetValueOrDefault(candidate) + seedInterest * similarity;
+                }
+            }
+            return cfScores;
+        }
+
+        /// <summary>候选商品近 30 天浏览量：productId -> 访问次数（全局信号，按公司隔离）</summary>
+        private async Task<Dictionary<int, int>> GetRecentVisitCounts(List<int> productIds, int companyId, DateTime now)
+        {
+            if (productIds.Count == 0)
+            {
+                return [];
+            }
+            var from = now.AddDays(-PopularityWindowDays);
+            var counts = await Context.Queryable<Shop_Visit>()
+                .Where(it => it.FromType == (int)VisitFromType.Product
+                    && it.CompanyID == companyId
+                    && it.ProductID.HasValue
+                    && it.StartTime >= from
+                    && productIds.Contains(it.ProductID.Value))
+                .GroupBy(it => it.ProductID)
+                .Select(it => new { ProductID = it.ProductID, Count = SqlFunc.AggregateCount(it.ID) })
+                .ToListAsync();
+            return counts
+                .Where(it => it.ProductID.HasValue)
+                .ToDictionary(it => it.ProductID!.Value, it => it.Count);
+        }
+
+        /// <summary>热度榜：近 30 天浏览量优先（冷启动/兜底），同热度按 ProductID 倒序打散</summary>
+        private static List<RankedProduct> RankByPopularity(List<CandidateProduct> candidates, Dictionary<int, int> visitCounts)
+        {
+            return candidates
+                .Select(it => new RankedProduct
+                {
+                    ProductID = it.ProductID,
+                    Score = Math.Log(1 + visitCounts.GetValueOrDefault(it.ProductID))
+                })
+                .OrderByDescending(it => it.Score)
+                .ThenByDescending(it => it.ProductID)
+                .ToList();
+        }
+
+        /// <summary>
+        /// 头部高分池随机打散：取前 pageSize×4（至少 40）个高分商品，在分值区间上叠加随机扰动后重排，
+        /// 每次刷新顺序不同但整体质量不变（长尾商品仍按原序排在后面）。
+        /// query.SID 有值时用固定种子（同一用户翻页顺序稳定），无值时每次请求随机。
+        /// </summary>
+        private static List<RankedProduct> ShuffleRanked(List<RankedProduct> ranked, ProductPagedModel query)
+        {
+            if (ranked.Count <= 1)
+            {
+                return ranked;
+            }
+
+            var pageSize = query.PageSize < 1 ? 15 : query.PageSize;
+            var poolSize = Math.Min(ranked.Count, Math.Max(pageSize * 4, 40));
+            var pool = ranked.Take(poolSize).ToList();
+            var rest = ranked.Skip(poolSize).ToList();
+
+            var seed = query.SID ?? Random.Shared.Next();
+            var rng = new Random(seed);
+            var min = pool.Min(it => it.Score);
+            var max = pool.Max(it => it.Score);
+            var spread = Math.Max(max - min, 1);
+
+            var shuffled = pool
+                .Select(it => new
+                {
+                    Item = it,
+                    Order = it.Score + rng.NextDouble() * spread * 0.65   // 扰动幅度不超过分差的 65%，高分仍倾向靠前
+                })
+                .OrderByDescending(it => it.Order)
+                .Select(it => it.Item)
+                .ToList();
+            shuffled.AddRange(rest);
+            return shuffled;
+        }
+
+        private async Task<List<int>> ResolveCateIds(ProductPagedModel query, int companyId)
+        {
+            if (query.CID.HasValue)
+            {
+                var cid = query.CID.Value;
+                var childIds = await Context.Queryable<Shop_Categories>()
+                    .Where(it => it.ParentID == cid && it.CompanyID == companyId)
+                    .Select(it => it.CateID)
+                    .ToListAsync();
+                var ids = new List<int> { cid };
+                ids.AddRange(childIds);
+                return ids.Distinct().ToList();
+            }
+
+            if (!query.ProductID.HasValue)
+            {
+                return [];
+            }
+
+            var product = await Context.Queryable<Shop_Product>()
+                .Where(it => it.ProductID == query.ProductID.Value)
+                .Select(it => new { it.CateID, it.CateIDS })
+                .FirstAsync();
+            if (product == null)
+            {
+                return [];
+            }
+
+            return ParseCateIds(product.CateID, product.CateIDS);
+        }
+
+        private static void ApplyCateFilter(Expressionable<Shop_Product> expable, List<int> cateIds)
+        {
+            var cateExp = Expressionable.Create<Shop_Product>();
+            cateExp.Or(it => it.CateID.HasValue && cateIds.Contains(it.CateID.Value));
+            foreach (var cateId in cateIds)
+            {
+                var pattern = $",{cateId},";
+                cateExp.Or(it => it.CateIDS.Contains(pattern));
+            }
+            expable.And(cateExp.ToExpression());
+        }
+
+        private static List<int> ParseCateIds(int? cateId, string? cateIds)
+        {
+            var ids = new List<int>();
+            if (cateId.HasValue && cateId.Value > 0)
+            {
+                ids.Add(cateId.Value);
+            }
+            if (!string.IsNullOrEmpty(cateIds))
+            {
+                foreach (var part in cateIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (int.TryParse(part, out var id) && id > 0)
+                    {
+                        ids.Add(id);
+                    }
+                }
+            }
+            return ids.Distinct().ToList();
+        }
+
+        private sealed class RankedProduct
+        {
+            public int ProductID { get; set; }
+            public double Score { get; set; }
+        }
+
+        private sealed class CandidateProduct
+        {
+            public int ProductID { get; set; }
+            public int? CateID { get; set; }
+            public string? CateIDS { get; set; }
+            public int? ProductCount { get; set; }
+        }
+    }
+}

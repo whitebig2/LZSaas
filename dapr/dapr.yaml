@@ -1,0 +1,12 @@
+version: 1
+apps:
+  - appDirPath: ./LZ.Users.API/
+    appID: UsersService
+    appPort: 8860
+    daprHTTPPort: 5881
+    command: ["dotnet", "run"]
+  - appID: CompanyService
+    appDirPath: ./LZ.Company.API/
+    appPort: 8861
+    daprHTTPPort: 5882
+    command: ["dotnet", "run"]

@@ -1,0 +1,41 @@
+﻿
+<div id="village" class="indexbody">
+    <div class="villagetitle">@ViewBag.Title 所辖村（社区）</div>
+    <div class="btnbox">
+        <div class="btnstart">
+            <van-button round color="#29bfaa" size="large" v-on:click="start">开始填写</van-button>
+        </div>
+    </div>
+    <van-popup v-model="showPicker" position="bottom">
+        <van-picker show-toolbar
+                    :columns="columns"
+                    v-on:confirm="onConfirm"
+                    v-on:cancel="showPicker = false" title="请选择村" />
+    </van-popup>
+</div>
+<script>
+    var village_vue = new Vue({
+        el: "#village",
+        data: {
+            list,
+            result: [],
+            showPicker: false,
+            columns:[]
+        },
+        created() {
+            var items = [];
+            list.forEach(item => {
+                items.push({ text: item.name, value: item.gid });
+            })
+            this.columns = items;
+        },
+        methods: {
+            start() {
+                this.showPicker=true
+            },
+            onConfirm(data) {
+                window.location.href = "/Answer/index?id=" + data.value
+            }
+        }
+    })
+</script>

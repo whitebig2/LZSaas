@@ -1,0 +1,6 @@
+@LZ.Gateway_HostAddress = http://localhost:5015
+
+GET {{LZ.Gateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
