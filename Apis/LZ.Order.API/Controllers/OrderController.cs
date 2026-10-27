@@ -538,7 +538,7 @@ namespace LZ.Order.API
                 throw new ErrorCodeException(-1, "订单号错误");
             }
             var ids= orderIds.Split(',');
-            var status = new int[] { (int)OrderStatus.HaveShip,(int)OrderStatus.WaitReceipt, (int)OrderStatus.Have };
+            var status = new int[] { (int)OrderStatus.HaveShip,(int)OrderStatus.WaitReceipt};
             var models = await orderService.List(it=>ids.Contains(it.OrderID) && it.OrderType==(int)OrderType.Product && it.PayType== PayType.WeiXinPay.ToString() && status.Contains(it.OrderStatus.Value) && it.CompanyID==CurrentUser.CompanyID,new PagedModelBase() { Page=0});
             var expModels = await httpService.GetAsync<List<Model.Shop_Express>>(ServiceNames.ShopBasicService, $"/api/express/list", isItem: true);//获取快递信息，匹配erp的快递编码
             foreach (var model in models)
@@ -560,7 +560,7 @@ namespace LZ.Order.API
                     info.order_key = new OrderKeyModel();
                     info.order_key.order_number_type = 1;
                     info.order_key.mchid = company.Config.WeiXinMerchantID;
-                    info.order_key.out_trade_no = model.OrderPayID;
+                    info.order_key.out_trade_no = model.OrderID;
                     info.delivery_mode = 1;
                     info.shipping_list = new List<ShippingListModel>();
                     var shipInfo = new ShippingListModel();
@@ -672,9 +672,16 @@ namespace LZ.Order.API
             {
                 throw new ErrorCodeException(-1, "修改错误，信息不全！");
             }
-            var user = CurrentUser;
-            if (await orderService.UpdateOrderTotal(orderId, money,user))
+            if (await orderService.UpdateOrderTotal(orderId, money))
             {
+                var user = CurrentUser;
+                var log = new Shop_OrderLog();
+                log.CreateTime = DateTime.Now;
+                log.SysUserID = user.UserID;
+                log.SysFullName = user.FullName;
+                log.Remark = "后台修改价格";
+                log.OrderID = orderId;
+                await orderLogService.Add(log);
                 return Ok();
             }
             else

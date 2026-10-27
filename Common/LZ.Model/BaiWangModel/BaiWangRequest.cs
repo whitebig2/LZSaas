@@ -130,9 +130,9 @@ namespace LZ.Model.BaiWangModel
         public string? goodsTotalTax { get; set; }
     }
 
-    /// <summary>
+        /// <summary>
     /// 差额凭证信息(差额征税标签为02时必填)
-    /// </summary>
+        /// </summary>
     public class BaiWangBalanceInfoList
     {
         /// <summary>

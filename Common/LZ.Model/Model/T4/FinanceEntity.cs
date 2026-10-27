@@ -636,7 +636,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  int? PartnerID { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -1110,7 +1110,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  bool IsTaxPrice { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -2172,7 +2172,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  bool IsEnabled { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		

@@ -26,6 +26,7 @@ namespace LZ.Model.Dtos
     {
         [JsonIgnore]
         public int IntegralType { get; set; }
+
         /// <summary>
         /// 积分类别
         /// </summary>

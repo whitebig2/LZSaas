@@ -636,7 +636,7 @@ namespace LZ.Finance.Service.Services
             {
                 return (false, "银行推送数据组装失败");
             }
-       
+
             var res = await _httpService.PostAsync(ServiceNames.BankService, "/api/CzyPayOrder/Add", json);
             if (res == null)
             {

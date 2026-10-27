@@ -1,3 +1,4 @@
+using LZ.Basic.Service.Departments;
 using LZ.Basic.Service.Interface;
 using LZ.Common.Extensions;
 using LZ.Core;
@@ -13,6 +14,8 @@ namespace LZ.Basic.Service.Services;
 
 public class DepartmentService : ServicesBase<Live_Partner>, IDepartmentService, IScopedDependency
 {
+    private ISqlSugarClient Departments => DbScoped.SugarScope.GetConnection("Main");
+    private ISqlSugarClient Finance => DbScoped.SugarScope.GetConnection("Finance");
 
     public async Task<List<Live_Partner>> GetDeptTreeAsync(int companyId, CancellationToken ct = default)
     {
@@ -37,6 +40,8 @@ public class DepartmentService : ServicesBase<Live_Partner>, IDepartmentService,
             throw new ErrorCodeException(-1, "公司ID不能为空");
 
         await ValidateParentAsync(dept, ct);
+        dept.DeptGID = Guid.NewGuid();
+        dept.DeptID = 0;
         dept.CreateTime = DateTime.Now;
         dept.Enabled = false;
         return await base.Context.Insertable(dept).ExecuteCommandAsync();

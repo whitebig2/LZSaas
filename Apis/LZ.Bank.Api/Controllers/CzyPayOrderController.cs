@@ -14,6 +14,7 @@ namespace LZ.Bank.Api.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
+    [AllowAnonymous]
     public class CzyPayOrderController : ApiControllerBase
     {
         private readonly ICzyPayOrderService _service;
@@ -86,53 +87,53 @@ namespace LZ.Bank.Api.Controllers
             return Ok("创建成功");
         }
 
-        //[HttpPut]
-        //public async Task<IActionResult> Update(Czy_PayOrderExtension model)
-        //{
-        //    var exist = await _service.Get(f => f.ID == model.ID);
-        //    if (exist == null)
-        //    {
-        //        throw new ErrorCodeException(-1, "你要读取的数据不存在");
-        //    }
-        //    ValidateEntityDetails(model);
-        //    PrepareEntity(model, exist);
-        //    await EnsureBillsPayOrderNoUnique(model, exist.ID);
+        [HttpPut]
+        public async Task<IActionResult> Update(Czy_PayOrderExtension model)
+        {
+            var exist = await _service.Get(f => f.ID == model.ID);
+            if (exist == null)
+            {
+                throw new ErrorCodeException(-1, "你要读取的数据不存在");
+            }
+            ValidateEntityDetails(model);
+            PrepareEntity(model, exist);
+            await EnsureBillsPayOrderNoUnique(model, exist.ID);
 
-        //    try
-        //    {
-        //        DbScoped.SugarScope.BeginTran();
-        //        await _service.UpdateNav(model);
-        //        DbScoped.SugarScope.CommitTran();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        DbScoped.SugarScope.RollbackTran();
-        //        throw new ErrorCodeException(-1, ex.Message, ex);
-        //    }
-        //    return Ok();
-        //}
+            try
+            {
+                DbScoped.SugarScope.BeginTran();
+                await _service.UpdateNav(model);
+                DbScoped.SugarScope.CommitTran();
+            }
+            catch (Exception ex)
+            {
+                DbScoped.SugarScope.RollbackTran();
+                throw new ErrorCodeException(-1, ex.Message, ex);
+            }
+            return Ok();
+        }
 
-        //[HttpDelete]
-        //public async Task<IActionResult> Delete([FromForm] Guid id)
-        //{
-        //    var exist = await _service.Get(f => f.ID == id);
-        //    if (exist == null)
-        //    {
-        //        throw new ErrorCodeException(-1, "你要读取的数据不存在");
-        //    }
-        //    try
-        //    {
-        //        DbScoped.SugarScope.BeginTran();
-        //        await _service.DeleteNav(id);
-        //        DbScoped.SugarScope.CommitTran();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        DbScoped.SugarScope.RollbackTran();
-        //        throw new ErrorCodeException(-1, ex.Message, ex);
-        //    }
-        //    return Ok();
-        //}
+        [HttpDelete]
+        public async Task<IActionResult> Delete([FromForm] Guid id)
+        {
+            var exist = await _service.Get(f => f.ID == id);
+            if (exist == null)
+            {
+                throw new ErrorCodeException(-1, "你要读取的数据不存在");
+            }
+            try
+            {
+                DbScoped.SugarScope.BeginTran();
+                await _service.DeleteNav(id);
+                DbScoped.SugarScope.CommitTran();
+            }
+            catch (Exception ex)
+            {
+                DbScoped.SugarScope.RollbackTran();
+                throw new ErrorCodeException(-1, ex.Message, ex);
+            }
+            return Ok();
+        }
 
         private async Task CreateOrder(CzyPayOrderCreateDto dto)
         {

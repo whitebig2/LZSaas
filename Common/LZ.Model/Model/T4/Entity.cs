@@ -3894,7 +3894,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string PhoneMsgNo { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -4410,7 +4410,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string PartnerNames { get; set; }
-		
+		   
 		/// <summary>
 		/// 部门Id
 		/// </summary>		
@@ -6690,7 +6690,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  DateTime? CreateTime { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -6870,7 +6870,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  BusInsuranceApiPushDetailStatusEnumType Status { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -12684,7 +12684,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  int FailCount { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -19908,7 +19908,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
 		public  int PartnerID { get; set; }
-
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -20015,7 +20015,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  int? Integral { get; set; }
-		
+		   
 		/// <summary>
 		/// 部门类型
 		/// </summary>		
@@ -20807,7 +20807,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  PaymentOrderTransStatusEnumType Status { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -21083,7 +21083,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string JDYNumber { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -25409,7 +25409,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  bool IsPushToOrder { get; set; }
-		
+		   
 		/// <summary>
 		/// 
 		/// </summary>		

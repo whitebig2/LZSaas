@@ -57,7 +57,7 @@ namespace LZ.Bank.Api.Controllers
                     var ii = JsonConvert.DeserializeObject(result.Data.ToString()) as JObject;
                     //var ii = JsonConvert.DeserializeObject(obj.Data.ToString()) as JObject;
                     wallet = JsonConvert.DeserializeObject<Model.Live_BankWallet>(ii.ToString());
-                   
+                    
 
                 }
                 catch (Exception e)

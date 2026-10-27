@@ -695,8 +695,8 @@ namespace LZ.Statistics.API.Controllers
         #region 技术金融服务费
 
         public record InterestMonthReportRecord(DateTime month, List<Live_PrepaidInterestReport> records);
-        [HttpGet]
-        public async Task<IActionResult> GetInterestMonthReport(DateTime startMonth,DateTime endMonth)
+        [HttpPost]
+        public async Task<IActionResult> InterestRecordReport(DateTime startMonth,DateTime endMonth)
         {
 
             var currentMonth = DateTime.Today.AddDays(1 - DateTime.Today.Day);
@@ -709,7 +709,7 @@ namespace LZ.Statistics.API.Controllers
 
             List<InterestMonthReportRecord> dataList = new List<InterestMonthReportRecord>();
 
-            for (DateTime i = startMonth; i <= endMonth; i=i.AddMonths(1))
+            for (DateTime i = startMonth; i < endMonth; i=i.AddMonths(1))
             {
                 if (i == currentMonth)
                 {

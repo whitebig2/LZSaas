@@ -24,14 +24,14 @@ namespace LZ.Invoice.Api.Controllers
         {
             var user = CurrentUser;
             var exp = Expressionable.Create<FIN_InvoiceOrderDetail>();
-            //if (user.PlatformType == Model.Enums.PlatformType.MiniAdmin || user.PlatformType == Model.Enums.PlatformType.LZMini)
-            //{
-            //    exp.And(f => f.CompanyID == user.CompanyID);
-            //}
-            //else
-            //{
-            //    exp.AndIF(query.CompanyID.HasValue, f => f.CompanyID == query.CompanyID);
-            //}
+            if (user.PlatformType == Model.Enums.PlatformType.MiniAdmin || user.PlatformType == Model.Enums.PlatformType.LZMini)
+            {
+                exp.And(f => f.CompanyID == user.CompanyID);
+            }
+            else
+            {
+                exp.AndIF(query.CompanyID.HasValue, f => f.CompanyID == query.CompanyID);
+            }
             if (!string.IsNullOrEmpty(ids))
             {
                 var arr = ids.Split(',');

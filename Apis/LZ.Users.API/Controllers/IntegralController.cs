@@ -113,32 +113,17 @@ namespace LZ.Users.API.Controllers
         [HttpGet]
         public async Task<IActionResult> CatagoryStatistics([FromQuery] IntegralCatagoryStatisticsDto query)
         {
-            var currUser = CurrentUser;
-            dynamic respData = new ExpandoObject();
-            if (!query.startTime.HasValue)
+            if(!query.startTime.HasValue)
             {
                 throw new ErrorCodeException(-1, "开始时间不能为空！");
             }
-            if (!query.endTime.HasValue)
+            if(!query.endTime.HasValue)
             {
                 throw new ErrorCodeException(-1, "结束时间不能为空！");
             }
             var guid = currUser.CompanyID;
             var result = await integralService.CatagoryStatistics(query.startTime.Value, query.endTime.Value);
-            if (result != null)
-            {
-                var categoryStatData = result as List<IntegralCatagoryStatisticsResultDto>;
-                var integralTypes = new[] { "消费返积分", "推荐奖励", "平台充值", "新员工注册", "中奖赠送积分", "签到积分" };
-                var companyObj = await companyConfigService.Get(currUser.CompanyGID);
-                var platformInegral = companyObj?.Config?.PlatformIntegral ?? 0;
-                var platformGift = categoryStatData.Where(t => integralTypes.Contains(t.Catagory)).Sum(t => t.Count);
-                var remainInegral = (platformInegral > 0) ? platformInegral - platformGift : platformGift;
-                respData.platformInegral = platformInegral;
-                respData.platformGiftInegral = platformGift;
-                respData.remainInegral = remainInegral;
-                respData.items = categoryStatData;
-            }
-            return Ok(respData);
+            return Ok(result);
         }
 
 

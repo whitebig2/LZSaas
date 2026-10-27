@@ -721,6 +721,7 @@ namespace LZ.Customer.Service.Services
                 .ToListAsync();
 
             var relatedJobIds = visits.Select(it => it.JobID!.Value)
+                .Concat(entries.Select(it => it.JID ?? 0))
                 .Where(v => v > 0)
                 .Distinct()
                 .ToList();
@@ -1216,6 +1217,16 @@ namespace LZ.Customer.Service.Services
                 if (salaryVisits.Count > 0)
                 {
                     salaryLevel = (decimal)(salaryVisits.Sum(v => v.Item2) / salaryVisits.Count);
+                    }
+                    foreach (var visit in salaryVisits.Where(v => v.Item2 > 0))
+                    {
+                        weighted += visit.Item2 * VisitWeight;
+                        weights += VisitWeight;
+                    }
+                    if (weights > 0)
+                    {
+                        salaryLevel = (decimal)(weighted / weights);
+                    }
                 }
 
                 // 风险级众数 + 最近入职工种（全量记录）
@@ -1768,6 +1779,13 @@ namespace LZ.Customer.Service.Services
                         .Select(it => it.UserID)
                         .Distinct()
                         .ToListAsync();
+                    entryUsers = await Context.Queryable<Live_UserEntry>()
+                        .Where(it => it.JID != null && it.JID > 0
+                            && relatedJobIds.Contains(it.JID.Value)
+                            && (it.EntryTime >= entryFrom || it.CreateTime >= entryFrom))
+                        .Select(it => it.UserID)
+                        .Distinct()
+                        .ToListAsync();
                 }
             }
 
@@ -1911,6 +1929,7 @@ namespace LZ.Customer.Service.Services
 
             var visitFrom = now.AddDays(-VisitWindowDays);
             var searchFrom = now.AddDays(-SearchWindowDays);
+            var entryFrom = now.AddDays(-EntryWindowDays);
 
             // ① 近 30 天岗位浏览（按 JobID 去重：权重取停留档位、时间取最近一次）
             var visits = await Context.Queryable<Live_JobsVisit>()
@@ -2021,51 +2040,55 @@ namespace LZ.Customer.Service.Services
             var entries = await Context.Queryable<Live_UserEntry>()
                 .Where(it => it.UserID == userId)
                 .Select(it => new { it.Status, it.EntryTime, it.LeaveTime, it.CreateTime, it.WorkName, it.CustomerID })
-                .ToListAsync();
+                        .ToListAsync();
+                    tabsMap = tabsRows.ToDictionary(it => it.ID, it => it.Tabs);
+                    entryCustomerMap = tabsRows.ToDictionary(it => it.ID, it => it.CustomerID);
+                }
 
-            foreach (var entry in entries)
-            {
-                var status = entry.Status ?? 0;
-
-                double weight;
-                DateTime? signalTime;
-                if (status == (int)UserStatus.Entry)
+                foreach (var entry in entries)
                 {
+                    var jid = entry.JID ?? 0;
+                    var status = entry.Status ?? 0;
+
+                    double weight;
+                    DateTime? signalTime;
+                    if (status == (int)UserStatus.Entry)
+                    {
                     // 在职：该客户的岗位不再推荐；计最强正样本
                     if (entry.CustomerID > 0)
-                    {
+                        {
                         profile.CurrentCustomerIds.Add(entry.CustomerID!.Value);
+                        }
+                        weight = EntryLongWeight;
+                        signalTime = entry.EntryTime ?? entry.CreateTime;
                     }
-                    weight = EntryLongWeight;
-                    signalTime = entry.EntryTime ?? entry.CreateTime;
-                }
-                else if (status == (int)UserStatus.Leave)
-                {
-                    // 按在岗天数分桶：≥30 天正样本 / 3~30 天弱正 / <3 天负样本
+                    else if (status == (int)UserStatus.Leave)
+                    {
+                        // 按在岗天数分桶：≥30 天正样本 / 3~30 天弱正 / <3 天负样本
                     // Days 字段未维护，用 NowMonthInDay 口径从时间字段现算
                     var days = (decimal)CalcInDays(entry.EntryTime, entry.LeaveTime, now);
-                    weight = days >= 30 ? EntryLongWeight : days >= 3 ? EntryShortWeight : EntryQuickLeaveWeight;
-                    signalTime = entry.LeaveTime ?? entry.EntryTime ?? entry.CreateTime;
-                }
-                else if (ApplyStatuses.Contains(status))
-                {
-                    weight = ApplyWeight;
-                    signalTime = entry.CreateTime;
-                }
-                else if (status == (int)UserStatus.InterviewFailed || status == (int)UserStatus.NotEntry)
-                {
-                    weight = ApplyFailedWeight;
-                    signalTime = entry.CreateTime;
-                }
-                else
-                {
-                    continue;
-                }
+                        weight = days >= 30 ? EntryLongWeight : days >= 3 ? EntryShortWeight : EntryQuickLeaveWeight;
+                        signalTime = entry.LeaveTime ?? entry.EntryTime ?? entry.CreateTime;
+                    }
+                    else if (ApplyStatuses.Contains(status))
+                    {
+                        weight = ApplyWeight;
+                        signalTime = entry.CreateTime;
+                    }
+                    else if (status == (int)UserStatus.InterviewFailed || status == (int)UserStatus.NotEntry)
+                    {
+                        weight = ApplyFailedWeight;
+                        signalTime = entry.CreateTime;
+                    }
+                    else
+                    {
+                        continue;
+                    }
 
-                var halfLife = status == (int)UserStatus.Entry || status == (int)UserStatus.Leave
-                    ? EntryHalfLifeDays
-                    : SearchHalfLifeDays;
-                var w = weight * Decay(signalTime, now, halfLife);
+                    var halfLife = status == (int)UserStatus.Entry || status == (int)UserStatus.Leave
+                        ? EntryHalfLifeDays
+                        : SearchHalfLifeDays;
+                    var w = weight * Decay(signalTime, now, halfLife);
 
                 // 工种偏好（主路）：入职工种名反查 EntryJob ID；反查失败经入职客户的工种集合兜底
                 AddEntryWorkTypePreference(profile, dicts, entry.WorkName, entry.CustomerID, w);

@@ -25,7 +25,7 @@ namespace LZ.Order.API
                 var return_msg = resHandler.GetParameter("return_msg");
                 orderID = resHandler.GetParameter("out_trade_no");
                 xml = resHandler.ParseXML();
-                var model = await orderService.GetOrderPayID(orderID);
+                var model = await orderService.Get(orderID);
                 if (model == null)
                 {
                     throw new ErrorCodeException(-1, "该订单不存在!");

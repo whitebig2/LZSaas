@@ -49,7 +49,7 @@ namespace LZ.Finance.API.Controllers
         private ISalaryRecordService _salaryRecordService    ;
         private IBaiWangService _baiWangService;
 
-        public TestController(IFxqService fxqService, IRedisService redisService, IAliyunOSSService aliyunOSSService, IFinanceOtherService financeOtherService, IEventPublisher publisher, ISalaryCustomerService salaryCustomerService, IFinanceOtherService otherService, ICurrentUser currentUser, IAuthService authService, IHttpService httpService, ISalaryRecordService salaryRecordService, IBaiWangService baiWangService)
+        public TestController(IFxqService fxqService, IRedisService redisService, IAliyunOSSService aliyunOSSService, IFinanceOtherService financeOtherService, IEventPublisher publisher, ISalaryCustomerService salaryCustomerService, IFinanceOtherService otherService, ICurrentUser currentUser, IAuthService authService, IHttpService httpService, ISalaryRecordService salaryRecordService)
         {
             _fxqService = fxqService;
             _redisService = redisService;
