@@ -12,72 +12,6 @@ namespace LZ.Model
 {	
 
 	/// <summary>
-	///  - 实体层
-	/// </summary>
-	[Serializable]
-	[TenantAttribute("Main")]
-	public partial class AI_Knowledge
-    {
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
-		public  int ID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Title { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Type { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Indexs { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Content { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  decimal? Sroce { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  DateTime? CreateTime { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? CompanyID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  Guid? CompanyGID { get; set; }
-		   
-    }
-
-
-
-	/// <summary>
 	/// AccountReceivableStatusEnumType - 实体层
 	/// </summary>
 	[Serializable]
@@ -3894,7 +3828,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string PhoneMsgNo { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -4410,7 +4344,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string PartnerNames { get; set; }
-		   
+		
 		/// <summary>
 		/// 部门Id
 		/// </summary>		
@@ -6690,7 +6624,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  DateTime? CreateTime { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -6870,7 +6804,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  BusInsuranceApiPushDetailStatusEnumType Status { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -12288,6 +12222,18 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string LegalPersonCardID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string BaiWangUserName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string BaiWangPassword { get; set; }
 		   
     }
 
@@ -12684,12 +12630,18 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  int FailCount { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
 		public  string Content { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ImageContent { get; set; }
 		   
     }
 
@@ -19908,7 +19860,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
 		public  int PartnerID { get; set; }
-		
+
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -20015,7 +19967,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  int? Integral { get; set; }
-		   
+		
 		/// <summary>
 		/// 部门类型
 		/// </summary>		
@@ -20807,7 +20759,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  PaymentOrderTransStatusEnumType Status { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -20915,6 +20867,12 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string UserName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string UserPassword { get; set; }
 		
 		/// <summary>
 		/// 
@@ -21083,12 +21041,144 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string JDYNumber { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
 		public  Guid? DeptGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  bool IsPartner { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RoleIDS { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RoleNames { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RoleNumbers { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? ShopID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Unionid { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  bool IsLoginAdmin { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Main")]
+	public partial class Live_PersonnelCompany
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true)]
+		public  int UserID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int CompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? UserGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? CompanyGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RoleIDS { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RoleNames { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RoleNumbers { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  bool Enabled { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? UserType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? PartnerID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? PartnerGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PartnerName { get; set; }
 		
 		/// <summary>
 		/// 
@@ -21413,6 +21503,30 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string OpenId { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Main")]
+	public partial class Live_PersonnelRoles
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true)]
+		public  Guid RGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int UserID { get; set; }
 		   
     }
 
@@ -25409,7 +25523,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  bool IsPushToOrder { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -27059,6 +27173,630 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  int? InStatus { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Main")]
+	public partial class Live_TaxAccount
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true)]
+		public  Guid ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string ShowName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int Status { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string BelongTaxNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string CustomerTaxNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  long LoginType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RealNameAccount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RealNamePassword { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string DeclarePassword { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string TenantName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int TenantID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  Guid TenantGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  bool IsEnable { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? SyncStatus { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Main")]
+	public partial class Live_TaxCustomer
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true)]
+		public  Guid ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string BelongTaxNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string CustomerTaxNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string CustomerName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string AreaCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int EnterpriseType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string DigitAccount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string DigitAccountPassword { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string TenantName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int TenantID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  Guid TenanGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  bool IsEnable { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  Guid TaxAccountID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int Status { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? SyncStatus { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Main")]
+	public partial class Live_TaxCustomerEmployee
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true)]
+		public  Guid ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  Guid TaxCustomerID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string JobNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string Name { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string IdCardType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string IdCardNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Nationality { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Sex { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Birthday { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Status { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string EmploymentType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string OtherExplain { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string EmploymentAnnualSituation { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Mobile { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  DateTime? EmploymentDate { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? ResignationDate { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string IsDisability { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string DisabilityCardType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string DisabilityCardNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string IsMartyrFamilies { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string MartyrFamiliesCardNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  string IsLonelyOld { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string IsDeductExpense { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Education { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Duty { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Email { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Remark { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceProvinceCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceProvince { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceCityCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceCity { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceAreaCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceArea { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceStreetCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceStreet { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string RegisteredResidenceDetail { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceProvinceCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceProvince { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceCityCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceCity { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceAreaCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceArea { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceStreetCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceStreet { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FrequentResidenceDetail { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressProvinceCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressProvince { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressCityCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressCity { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressAreaCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressArea { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressStreetCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressStreet { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ContactAddressDetail { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string SellerBankCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string SellerBankNumber { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string SellerBankProvinceCode { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PersonalInvestmentAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PersonalInvestmentPercentage { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? DeclareStatus { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? VerifyStatus { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string FailReason { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? TaxMonth { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? SyncStatus { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? StartMonth { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? EndMonth { get; set; }
 		   
     }
 
@@ -44477,6 +45215,12 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  int? BusinessModel { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string CompanyNo { get; set; }
 		   
     }
 
@@ -52319,6 +53063,84 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string OperateFromName { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Main")]
+	public partial class Live_V_UserEntryTax
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Name { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string CardID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Phone { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? EntryTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? LeaveTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Status { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string CustomerName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string CustomerNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string SignUnitName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string SignUnitNo { get; set; }
 		   
     }
 

@@ -95,6 +95,7 @@ namespace LZ.Finance.Service.Services
                 CardID = f.CardID,
                 BankName = f.BankName,
                 BankNo = f.BankNo,
+                BankBranceCode = f.BankBranceCode,
                 TransAmount = f.TransAmount,
                 TransTime = null,
                 Status = PaymentOrderTransStatusEnumType.待支付,
@@ -226,6 +227,7 @@ namespace LZ.Finance.Service.Services
                 CardID = f.CardID,
                 BankName = f.BankName,
                 BankNo = f.BankNo,
+                BankBranceCode = f.BankBranceCode,
                 TransAmount = f.TransAmount,
                 TransTime = null,
                 Status = PaymentOrderTransStatusEnumType.待支付,
@@ -636,7 +638,7 @@ namespace LZ.Finance.Service.Services
             {
                 return (false, "银行推送数据组装失败");
             }
-
+       
             var res = await _httpService.PostAsync(ServiceNames.BankService, "/api/CzyPayOrder/Add", json);
             if (res == null)
             {
@@ -742,6 +744,7 @@ namespace LZ.Finance.Service.Services
                     PrivateAmount = f.TransAmount,
                     ReceiveAccountName = f.Name,
                     ReceiveAccountNo = f.BankNo,
+                    BankBranceCode = f.BankBranceCode,
                     ReceiveNature = "2",
                     PayUse = model.PayUse,
                     Purpose = model.Purpose,

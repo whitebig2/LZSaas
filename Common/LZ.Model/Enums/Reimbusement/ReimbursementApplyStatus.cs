@@ -11,14 +11,26 @@ namespace LZ.Model.Enums.Reimbusement
     /// </summary>
     public enum ReimbursementApplyStatus : byte
     {
+        /// <summary>
+        /// 待审核
+        /// </summary>
         [System.ComponentModel.Description("待审核")]
         PendingReview = 10,
+        /// <summary>
+        /// 审核退回
+        /// </summary>
 
         [System.ComponentModel.Description("审核退回")]
         ReviewReturned = 20,
+        /// <summary>
+        /// 待打款
+        /// </summary>
 
         [System.ComponentModel.Description("待打款")]
         PendingPayment = 30,
+        /// <summary>
+        /// 已打款
+        /// </summary>
 
         [System.ComponentModel.Description("已打款")]
         Paid = 40

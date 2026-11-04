@@ -51,7 +51,21 @@ namespace LZ.Bank.Api.Controllers
         }
 
 
-        [HttpPost("TestAesTest")]
+        [HttpGet]
+        public IActionResult GetEnv()
+        {
+            if (_env.IsDevelopment())
+            {
+                return Ok("IsDevelopment");
+            }
+            else if (_env.IsProduction())
+            {
+                return Ok("IsProduction");
+            }
+            return Ok("未知");
+        }
+
+        [HttpPost]
         public IActionResult TestAesTest()
         {
             const string plainText = "Hello";
@@ -200,16 +214,7 @@ namespace LZ.Bank.Api.Controllers
 
 
 
-        [HttpGet]
-        public async Task<IActionResult> GetEnv()
-        {
-            AesCBCHelper.GenerateKeyAndIV(out var keyByte,out var ivByte);
-            return Ok(new
-            {
-                keyByte = Convert.ToHexString(keyByte),
-                ivByte = Convert.ToHexString(ivByte),
-            });
-        }
+      
 
         public record Info(string data, string iv, string key, string signature, long timestamp, string nonce);
         [CzyTransactionFilter]

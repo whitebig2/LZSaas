@@ -132,4 +132,17 @@ namespace LZ.Model.BaiWangModel
         public string redConfirmStatus { get; set; } = string.Empty;
         public string originalDigitInvoiceNo { get; set; } = string.Empty;
     }
+
+    /// <summary>
+    /// 百望企业邀请相应
+    /// </summary>
+    public class BaiWangOpenOrgRelApi
+    {
+        public string? relUrl { get; set; }
+        public bool? autoAudit { get; set; }
+    }
+    public class BaiWangOpenOrgRelApiResponse
+    {
+        public List<BaiWangOpenOrgRelApi> list { get; set; } = new();
+    }
 }

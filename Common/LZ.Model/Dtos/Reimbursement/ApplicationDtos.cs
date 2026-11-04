@@ -44,7 +44,7 @@ public class ApplicationListItemDto
 public sealed class ApplicationDetailDto : ApplicationListItemDto
 {
     public ReimbursementFlowType FlowType { get; set; }
-    public int LegalEntityId { get; set; }
+    public Guid LegalEntityId { get; set; }
     public string LegalEntityName { get; set; } = string.Empty;
     public int CostTypeId { get; set; }
     public string CostTypeName { get; set; } = string.Empty;
@@ -106,32 +106,52 @@ public sealed class ResubmitPreloadDto
     public bool AllowModifyInvoices => false;
 }
 
+/// <summary>单次发票上传的识别、验真和查重结果；IsEffective 为 true 时才可计入申请票额。</summary>
 public sealed class InvoiceUploadDto
 {
+    /// <summary>本次上传记录标识，提交申请或补传时放入 UploadGuids。</summary>
     public Guid UploadGuid { get; set; }
+    /// <summary>识别状态：0 待识别，1 成功，2 失败。</summary>
     public byte RecognitionStatus { get; set; }
+    /// <summary>验真状态：0 待验真，1 成功，2 失败。</summary>
     public byte VerifyStatus { get; set; }
+    /// <summary>查重状态：0 待查重，1 通过，2 重复。</summary>
     public byte DuplicateCheckStatus { get; set; }
+    /// <summary>三项校验均通过且未被其他上传占用时为 true。</summary>
     public bool IsEffective { get; set; }
+    /// <summary>识别出的发票号码；识别失败时为空。</summary>
     public string? InvoiceNumber { get; set; }
+    /// <summary>验真票面的价税合计金额；验真未通过时为空，只有有效发票可计入合计。</summary>
     public decimal? TotalAmount { get; set; }
+    /// <summary>失败时展示给上传人的提示；成功时为空。</summary>
     public string? FailureMessage { get; set; }
 }
 
+/// <summary>多张发票提交前预校验请求；仅计算金额，不绑定到申请。</summary>
 public sealed class InvoiceValidationRequest
 {
+    /// <summary>本次拟使用的上传 GUID 列表，重复 GUID 属于无效请求。</summary>
     public List<Guid> UploadGuids { get; set; } = new();
+    /// <summary>申请金额；有效发票金额合计须覆盖报销申请金额。</summary>
     public decimal ApplyAmount { get; set; }
+    /// <summary>申请类型：报销或付款；付款申请允许票额不足后续补传。</summary>
     public ReimbursementApplyType ApplyType { get; set; }
+    /// <summary>报销金额不足时用于选择审核版或预算版提示；可为空。</summary>
     public ReimbursementFlowType? FlowType { get; set; }
 }
 
+/// <summary>多张发票按号码去重后的预校验结果。</summary>
 public sealed class InvoiceValidationDto
 {
+    /// <summary>去重后的有效票额是否达到申请金额；报销提交据此决定能否继续。</summary>
     public bool IsValid { get; set; }
+    /// <summary>本次有效且号码不重复的发票价税合计金额。</summary>
     public decimal ValidInvoiceTotalAmount { get; set; }
+    /// <summary>可计入金额并可用于本次申请绑定的上传 GUID。</summary>
     public List<Guid> ValidUploadGuids { get; set; } = new();
+    /// <summary>识别、验真或查重未通过，以及在本次列表中重复的上传 GUID。</summary>
     public List<Guid> InvalidUploadGuids { get; set; } = new();
+    /// <summary>报销发票金额不足时的提示；无提示时为空。</summary>
     public string? Message { get; set; }
 }
 
@@ -147,7 +167,7 @@ public sealed class ApiResponse<T>
 public class ApplicationFieldsRequest
 {
     /// <summary>法人主体 ID；必填，须大于 0，对应法人主体选项。</summary>
-    public int LegalEntityId { get; set; }
+    public Guid LegalEntityId { get; set; }
     /// <summary>法人主体名称快照；必填，最长 200 字符，随申请保存。</summary>
     public string LegalEntityName { get; set; } = string.Empty;
     /// <summary>成本类型 ID；必填，须大于 0，对应成本类型选项。</summary>
@@ -227,20 +247,13 @@ public sealed class DictItemDto
     public string Label { get; set; } = string.Empty;
 }
 
+/// <summary>UploadInvoice 的 multipart/form-data 请求参数。</summary>
 public sealed class InvoiceUploadRequest
 {
+    /// <summary>补传时必填，指向待补票付款申请；首次上传时必须为空。</summary>
     public Guid? ApplyGuid { get; set; }
+    /// <summary>上传用途：Initial 为首次申请上传，Supplement 为付款申请补传。</summary>
     public InvoiceUploadPurpose UploadPurpose { get; set; }
+    /// <summary>发票原文件；支持 PDF、JPG、JPEG、PNG，每次上传一个文件。</summary>
     public Microsoft.AspNetCore.Http.IFormFile File { get; set; } = null!;
-}
-
-public sealed class InvoiceCallbackRequest
-{
-    public Guid UploadGuid { get; set; }
-    public string ProviderRequestId { get; set; } = string.Empty;
-    public bool RecognitionSucceeded { get; set; }
-    public string? InvoiceNumber { get; set; }
-    public decimal? TotalAmount { get; set; }
-    public bool VerifySucceeded { get; set; }
-    public string? FailureCode { get; set; }
 }

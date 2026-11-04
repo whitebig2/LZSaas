@@ -470,7 +470,7 @@ namespace LZ.Customer.API
             Model.Live_Customer customer = new Live_Customer();
             try
             {
-                var model = await customerService.Get(t => t.CustomerName == name);
+                var model = await customerService.Get(t => t.CustomerName == name && t.CompanyID==1);
                 if (model != null)
                 {
                     return Ok(new { msg = "已存在公司名称", code = 1 });
@@ -721,7 +721,7 @@ namespace LZ.Customer.API
             Model.Live_Customer customer = new Live_Customer();
             try
             {
-                var model = await customerService.Get(t => t.CustomerName == companyName || t.Name==name);
+                var model = await customerService.Get(t => (t.CustomerName == companyName || t.Name==name) && t.CompanyID == 1);
                 if (model != null)
                 {
                     return Ok(new { msg = "已存在公司名称", code = 1 });

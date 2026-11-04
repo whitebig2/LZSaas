@@ -276,8 +276,8 @@ namespace LZ.Core
 
             builder.Services.AddHttpClient("ICBC", client =>
             {
-                //client.BaseAddress = new Uri("http://109.32.98.130:8086");
-                client.BaseAddress = new Uri("http://47.102.210.210:9981");
+                //client.BaseAddress = new Uri("http://47.102.210.210:9981");
+                client.BaseAddress = new Uri("http://109.32.98.131:8086");
                 client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             });
 

@@ -17,9 +17,9 @@ namespace LZ.Basic.Service.Services
             var count = new RefAsync<int>();
             if (query.Page == 0)
             {
-                return await base.Context.Queryable<AI_Knowledge>().Where(exp).OrderByDescending(it => it.ID).ToListAsync();
+                return await base.Context.Queryable<AI_Knowledge>().Where(exp).OrderByDescending(it => it.KnowledgeID).ToListAsync();
             }
-            var list = await base.Context.Queryable<AI_Knowledge>().Where(exp).OrderByDescending(it => it.ID).ToOffsetPageAsync(query.Page, query.PageSize, count);
+            var list = await base.Context.Queryable<AI_Knowledge>().Where(exp).OrderByDescending(it => it.KnowledgeID).ToOffsetPageAsync(query.Page, query.PageSize, count);
             query.Count = count.Value;
             return list;
         }
@@ -34,11 +34,11 @@ namespace LZ.Basic.Service.Services
 
         public async Task<AI_Knowledge> Get(int id)
         {
-            return await base.Context.Queryable<AI_Knowledge>().FirstAsync(it=>it.ID == id);
+            return await base.Context.Queryable<AI_Knowledge>().FirstAsync(it=>it.KnowledgeID == id);
         }
         public async Task<bool> Delete(int id)
         {
-            return await base.Context.Deleteable<AI_Knowledge>().Where(it => it.ID == id).ExecuteCommandAsync() > 0;
+            return await base.Context.Deleteable<AI_Knowledge>().Where(it => it.KnowledgeID == id).ExecuteCommandAsync() > 0;
         }
     }
 }

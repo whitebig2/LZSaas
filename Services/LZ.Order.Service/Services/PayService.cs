@@ -10,7 +10,6 @@ using Senparc.Weixin.WxOpen.AdvancedAPIs.Sec;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-
 namespace LZ.Order.Service.Services
 {
     public class PayService(ICompanyConfigService companyConfigService,ISettingsService settingsService) : ServicesBase<Model.Shop_Order>, IPayService, IScopedDependency

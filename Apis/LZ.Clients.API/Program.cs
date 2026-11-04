@@ -2,6 +2,8 @@ using LZ.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Console.Title = "客户端服务";
+
 var appModel = new LZ.Model.AppliationModel();
 appModel.ModuleKey = "clients-api";
 appModel.ModuleTitle = "客户端服务";

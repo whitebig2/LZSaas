@@ -46,7 +46,7 @@ namespace LZ.Bank.Api.Controllers
             _czyApipService = czyApipService;
             _redisService = redisService;
         }
-
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> OpenCardApplyJob()
         {
@@ -66,11 +66,12 @@ namespace LZ.Bank.Api.Controllers
                             sub.Status = OpenAccountProcessStatusEnumType.报表上传失败;
                             sub.ResCode = excelResult.Retcode;
                             sub.ResMsg = excelResult.Retmsg;
+                            sub.Content = JsonConvert.SerializeObject(excelResult);
                             list.Add(sub);
                         }
                         continue;
                     }
-                    var imgresult = await _bankIcbcService.OpenAccountUploadImageApplyAsync(subs[0].FilePath, subs[0].ZipFileName, DateTime.Now);
+                    var imgresult = await _bankIcbcService.OpenAccountUploadImageApplyAsync(subs[0].FilePath, subs[0].ZipFileName, subs[0].SendDate.Value);
                     if (imgresult.Retcode != "0000")
                     {
                         foreach (var sub in subs)
@@ -78,12 +79,15 @@ namespace LZ.Bank.Api.Controllers
                             sub.Status = OpenAccountProcessStatusEnumType.影像资料上传失败;
                             sub.ResCode = imgresult.Retcode;
                             sub.ResMsg = imgresult.Retmsg;
+                            sub.ImageContent = JsonConvert.SerializeObject(imgresult);
                             list.Add(sub);
                         }
                         continue;
                     }
                     foreach (var sub in subs)
                     {
+                        sub.Content = JsonConvert.SerializeObject(excelResult);
+                        sub.ImageContent = JsonConvert.SerializeObject(imgresult);
                         sub.Status = OpenAccountProcessStatusEnumType.待查询开户结果;
                         sub.ResCode = "0000";
                         sub.ResMsg = "上传成功";
@@ -104,7 +108,6 @@ namespace LZ.Bank.Api.Controllers
             foreach (var x in models)
             {
                 var result = await _bankIcbcService.OpenAccountQueryDetailAsync(x.Name, x.CardID, x.SendDate.Value);
-                Console.WriteLine("银行卡查询结果返回：" + JsonConvert.SerializeObject(result));
                 x.ResCode = result.Retcode;
                 x.ResMsg = result.Retmsg;
                 if (result.Retcode == "0000")
@@ -116,7 +119,6 @@ namespace LZ.Bank.Api.Controllers
                     dic.Add("status", x.Status.ToString());
                     var json = JsonConvert.SerializeObject(dic);
                     var send = await _httpService.PostAsync(ServiceNames.UsersService, "/api/BankOpenAccount/OpenCardQuery", json);
-                    Console.WriteLine("银行卡申请通过接口返回：" + JsonConvert.SerializeObject(send));
                     if (send.Code != 200)
                     {
                         x.FailMsg = send.Message ?? "开卡申请失败";
@@ -124,6 +126,7 @@ namespace LZ.Bank.Api.Controllers
                 }
                 else
                 {
+                    x.FailMsg = result.Content;
                     x.FailCount++;
                 }
 
@@ -238,213 +241,213 @@ namespace LZ.Bank.Api.Controllers
             try
             {
                 var list = await _payOrderService.ListNav(f => f.PushStatus == CzyPushStatusEnumType.待推送 && f.PushTime == null);
-            foreach (var modelItem in list)
-            {
-                if (modelItem.Records == null || modelItem.Records.Count == 0)
+                foreach (var modelItem in list)
                 {
-                    modelItem.ReturnCode = "-1";
-                    modelItem.ReturnMsg = "支付明细不能为空";
-                    modelItem.PushStatus = CzyPushStatusEnumType.推送失败;
-                    await _payOrderService.Update(modelItem);
-                }
-                else
-                {
-                    try
+                    if (modelItem.Records == null || modelItem.Records.Count == 0)
                     {
+                        modelItem.ReturnCode = "-1";
+                        modelItem.ReturnMsg = "支付明细不能为空";
+                        modelItem.PushStatus = CzyPushStatusEnumType.推送失败;
+                        await _payOrderService.Update(modelItem);
+                    }
+                    else
+                    {
+                        try
+                        {
 
                             var dt = DateTime.Now;
                             await _payOrderService.UpdatePushTime(modelItem.ID, dt);
 
 
-                        ApipResponse res = null;
-                        List<PaymentFailResultItem> resultSet = null;
+                            ApipResponse res = null;
+                            List<PaymentFailResultItem> resultSet = null;
 
-                        if (modelItem.PayType == CzyPayTypeEnumType.批量对私)
-                        {
-                            var paramSet = new BillBatchPrivateRequestV1.BillBatchPrivateRequestParamSet
+                            if (modelItem.PayType == CzyPayTypeEnumType.批量对私)
                             {
-                                BillsPayOrderNo = modelItem.BillsPayOrderNo,
-                                PayType = ((int)modelItem.PayType).ToString(),
-                                PaymentDate = (modelItem.PaymentDate ?? DateTime.Today).ToString("yyyy-MM-dd"),
-                                BusinessTypeCode = modelItem.BusinessTypeCode,
-                                BusinessTypeName = modelItem.BusinessTypeName,
-                                PayOrgCode = modelItem.PayOrgCode,
-                                PayOrgName = modelItem.PayOrgName,
-                                PayAccountNo = modelItem.PayAccountNo,
-                                PayChannel = ((int)modelItem.PayChannel).ToString(),
-                                PayAmount = modelItem.PayAmount.ToString("0.##"),
-                                PayCurrencyType = string.IsNullOrWhiteSpace(modelItem.PayCurrencyType) ? "CNY" : modelItem.PayCurrencyType,
-                                PayCurrencyName = string.IsNullOrWhiteSpace(modelItem.PayCurrencyName) ? "人民" : modelItem.PayCurrencyName,
-                                WhetherUrgent = modelItem.WhetherUrgent ? "1" : "2",
-                                Remark = modelItem.Remark,
-                                PayUse = modelItem.PayUse,
-                                CreateByCode = modelItem.CreateByCode,
-                                CreateByName = modelItem.CreateByName,
-                                Purpose = modelItem.Purpose,
-                                BatchPrivateRecList = modelItem.Records.Select(f => new BillBatchPrivateRequestV1.BillBatchPrivateRequestBatchPrivateRec
+                                var paramSet = new BillBatchPrivateRequestV1.BillBatchPrivateRequestParamSet
                                 {
-                                    BillsPayOrderNo = f.BillsPayOrderNo,
-                                    PrivateAmount = f.PrivateAmount.ToString("0.##"),
-                                    ReceiveAccountNo = f.ReceiveAccountNo,
-                                    ReceiveAccountName = f.ReceiveAccountName,
-                                    ReceiveAreaNameOfProvince = f.ReceiveAreaNameOfProvince,
-                                    ReceiveAreaNameOfCity = f.ReceiveAreaNameOfCity,
-                                    ReceiveBranchCode = f.ReceiveBranchCode,
-                                    ReceiveBranchName = f.ReceiveBranchName,
-                                    ReceiveNature = string.Empty,
-                                    ReceiveCurrencyCode = string.IsNullOrWhiteSpace(f.ReceiveCurrencyCode) ? "CNY" : f.ReceiveCurrencyCode,
-                                    ReceiveCurrencyName = string.IsNullOrWhiteSpace(f.ReceiveCurrencyName) ? "人民" : f.ReceiveCurrencyName,
-                                }).ToList()
-                            };
-
-                            var batchRes = await _czyApipService.BillBatchPrivate(paramSet);
-                            res = batchRes;
-                            resultSet = batchRes?.ResultSet;
-                        }
-                        else if (modelItem.PayType == CzyPayTypeEnumType.普通付款)
-                        {
-                            if (modelItem.Records.Count != 1)
-                            {
-                                throw new Exception("普通付款只能有一条支付明细");
-                            }
-
-                            var rec = modelItem.Records.First();
-                            var paramSet = new PaymentOrdinarypayRequestV1.PaymentOrdinarypayRequestParamSet
-                            {
-                                BillsPayOrderNo = modelItem.BillsPayOrderNo,
-                                PayType = ((int)modelItem.PayType).ToString(),
-                                PaymentDate = (modelItem.PaymentDate ?? DateTime.Today).ToString("yyyy-MM-dd"),
-                                BusinessTypeCode = modelItem.BusinessTypeCode,
-                                BusinessTypeName = modelItem.BusinessTypeName,
-                                PayOrgCode = modelItem.PayOrgCode,
-                                PayOrgName = modelItem.PayOrgName,
-                                PayAccountNo = modelItem.PayAccountNo,
-                                PayChannel = ((int)modelItem.PayChannel).ToString(),
-                                PayAmount = modelItem.PayAmount.ToString("0.##"),
-                                PayCurrencyType = string.IsNullOrWhiteSpace(modelItem.PayCurrencyType) ? "CNY" : modelItem.PayCurrencyType,
-                                PayCurrencyName = string.IsNullOrWhiteSpace(modelItem.PayCurrencyName) ? "人民" : modelItem.PayCurrencyName,
-                                WhetherUrgent = modelItem.WhetherUrgent ? "1" : "2",
-                                Remark = modelItem.Remark,
-                                PayUse = modelItem.PayUse,
-                                Purpose = modelItem.Purpose,
-                                PaymentRec = new PaymentOrdinarypayRequestV1.PaymentOrdinarypayRequestPaymentRec
-                                {
-                                    ReceiveAccountNo = rec.ReceiveAccountNo,
-                                    ReceiveAccountName = rec.ReceiveAccountName,
-                                    ReceiveAreaNameOfProvince = rec.ReceiveAreaNameOfProvince,
-                                    ReceiveAreaNameOfCity = rec.ReceiveAreaNameOfCity,
-                                    ReceiveBranchCode = rec.ReceiveBranchCode,
-                                    ReceiveBranchName = rec.ReceiveBranchName,
-                                        ReceiveNature = string.Empty,
-                                    ReceiveCurrencyCode = string.IsNullOrWhiteSpace(rec.ReceiveCurrencyCode) ? "CNY" : rec.ReceiveCurrencyCode,
-                                    ReceiveCurrencyName = string.IsNullOrWhiteSpace(rec.ReceiveCurrencyName) ? "人民" : rec.ReceiveCurrencyName,
-                                }
-                            };
-
-                            var ordinaryRes = await _czyApipService.PaymentOrdinaryPay(paramSet);
-                            res = ordinaryRes;
-                            resultSet = ordinaryRes?.ResultSet;
-                        }
-                        else if (modelItem.PayType == CzyPayTypeEnumType.批量付款)
-                        {
-                            var paramSet = new PaymentBatchpayRequestV1.PaymentBatchpayRequestParamSet
-                            {
-                                BillsPayOrderNo = modelItem.BillsPayOrderNo,
-                                PayType = ((int)modelItem.PayType).ToString(),
-                                PaymentDate = (modelItem.PaymentDate ?? DateTime.Today).ToString("yyyy-MM-dd"),
-                                BusinessTypeCode = modelItem.BusinessTypeCode,
-                                BusinessTypeName = modelItem.BusinessTypeName,
-                                PayOrgCode = modelItem.PayOrgCode,
-                                PayOrgName = modelItem.PayOrgName,
-                                PayAccountNo = modelItem.PayAccountNo,
-                                PayChannel = ((int)modelItem.PayChannel).ToString(),
-                                SumPayAmount = modelItem.PayAmount.ToString("0.##"),
-                                PayCurrencyType = string.IsNullOrWhiteSpace(modelItem.PayCurrencyType) ? "CNY" : modelItem.PayCurrencyType,
-                                PayCurrencyName = string.IsNullOrWhiteSpace(modelItem.PayCurrencyName) ? "人民" : modelItem.PayCurrencyName,
-                                WhetherUrgent = modelItem.WhetherUrgent ? "1" : "2",
-                                Remark = modelItem.Remark,
-                                PayUse = modelItem.PayUse,
-                                PaymentRecList = modelItem.Records.Select(f => new PaymentBatchpayRequestV1.PaymentBatchpayRequestPaymentRec
-                                {
-                                    BillsPayOrderNo = f.BillsPayOrderNo,
-                                    PrivateAmount = f.PrivateAmount.ToString("0.##"),
-                                    ReceiveAccountNo = f.ReceiveAccountNo,
-                                    ReceiveAccountName = f.ReceiveAccountName,
-                                    ReceiveAreaNameOfProvince = f.ReceiveAreaNameOfProvince,
-                                    ReceiveAreaNameOfCity = f.ReceiveAreaNameOfCity,
-                                    ReceiveBranchCode = f.ReceiveBranchCode,
-                                    ReceiveBranchName = f.ReceiveBranchName,
-                                    ReceiveNature = string.Empty,
-                                    ReceiveCurrencyCode = string.IsNullOrWhiteSpace(f.ReceiveCurrencyCode) ? "CNY" : f.ReceiveCurrencyCode,
-                                    ReceiveCurrencyName = string.IsNullOrWhiteSpace(f.ReceiveCurrencyName) ? "人民" : f.ReceiveCurrencyName,
-                                    Summary = modelItem.PayUse,
-                                    Postscript = modelItem.Purpose,
-                                }).ToList()
-                            };
-
-                            var batchPayRes = await _czyApipService.PaymentBatchPay(paramSet);
-                            res = batchPayRes;
-                            resultSet = batchPayRes?.ResultSet;
-                        }
-                        else
-                        {
-                            throw new Exception($"不支持的付款类型：{(int)modelItem.PayType}");
-                        }
-
-                        modelItem.ReturnCode = res?.ReturnCode.ToString();
-                        modelItem.ReturnMsg = res?.ReturnMsg;
-                        modelItem.PushTime = DateTime.Now;
-                        if (res != null && res.IsSuccess)
-                        {
-                            modelItem.PushStatus = CzyPushStatusEnumType.推送成功;
-                            await _payOrderService.Update(modelItem);
-                        }
-                        else
-                        {
-                            modelItem.PushStatus = CzyPushStatusEnumType.推送失败;
-                            if (resultSet != null && resultSet.Count > 0)
-                            {
-                                modelItem.ReturnFailReasons = JsonConvert.SerializeObject(resultSet);
-                                foreach (var fail in resultSet)
-                                {
-                                    var detail = modelItem.Records.FirstOrDefault(f => f.BillsPayOrderNo == fail.BillsPayOrderNo);
-                                    if (detail != null)
+                                    BillsPayOrderNo = modelItem.BillsPayOrderNo,
+                                    PayType = ((int)modelItem.PayType).ToString(),
+                                    PaymentDate = (modelItem.PaymentDate ?? DateTime.Today).ToString("yyyy-MM-dd"),
+                                    BusinessTypeCode = modelItem.BusinessTypeCode,
+                                    BusinessTypeName = modelItem.BusinessTypeName,
+                                    PayOrgCode = modelItem.PayOrgCode,
+                                    PayOrgName = modelItem.PayOrgName,
+                                    PayAccountNo = modelItem.PayAccountNo,
+                                    PayChannel = ((int)modelItem.PayChannel).ToString(),
+                                    PayAmount = modelItem.PayAmount.ToString("0.##"),
+                                    PayCurrencyType = string.IsNullOrWhiteSpace(modelItem.PayCurrencyType) ? "CNY" : modelItem.PayCurrencyType,
+                                    PayCurrencyName = string.IsNullOrWhiteSpace(modelItem.PayCurrencyName) ? "人民" : modelItem.PayCurrencyName,
+                                    WhetherUrgent = modelItem.WhetherUrgent ? "1" : "2",
+                                    Remark = modelItem.Remark,
+                                    PayUse = modelItem.PayUse,
+                                    CreateByCode = modelItem.CreateByCode,
+                                    CreateByName = modelItem.CreateByName,
+                                    Purpose = modelItem.Purpose,
+                                    BatchPrivateRecList = modelItem.Records.Select(f => new BillBatchPrivateRequestV1.BillBatchPrivateRequestBatchPrivateRec
                                     {
-                                        detail.FailReasons = fail.FailReasons;
-                                    }
+                                        BillsPayOrderNo = f.BillsPayOrderNo,
+                                        PrivateAmount = f.PrivateAmount.ToString("0.##"),
+                                        ReceiveAccountNo = f.ReceiveAccountNo,
+                                        ReceiveAccountName = f.ReceiveAccountName,
+                                        ReceiveAreaNameOfProvince = f.ReceiveAreaNameOfProvince,
+                                        ReceiveAreaNameOfCity = f.ReceiveAreaNameOfCity,
+                                        ReceiveBranchCode = f.ReceiveBranchCode,
+                                        ReceiveBranchName = f.ReceiveBranchName,
+                                        ReceiveNature = string.Empty,
+                                        ReceiveCurrencyCode = string.IsNullOrWhiteSpace(f.ReceiveCurrencyCode) ? "CNY" : f.ReceiveCurrencyCode,
+                                        ReceiveCurrencyName = string.IsNullOrWhiteSpace(f.ReceiveCurrencyName) ? "人民" : f.ReceiveCurrencyName,
+                                    }).ToList()
+                                };
+
+                                var batchRes = await _czyApipService.BillBatchPrivate(paramSet);
+                                res = batchRes;
+                                resultSet = batchRes?.ResultSet;
+                            }
+                            else if (modelItem.PayType == CzyPayTypeEnumType.普通付款)
+                            {
+                                if (modelItem.Records.Count != 1)
+                                {
+                                    throw new Exception("普通付款只能有一条支付明细");
                                 }
-                                await _payOrderService.UpdateNav(modelItem);
+
+                                var rec = modelItem.Records.First();
+                                var paramSet = new PaymentOrdinarypayRequestV1.PaymentOrdinarypayRequestParamSet
+                                {
+                                    BillsPayOrderNo = modelItem.BillsPayOrderNo,
+                                    PayType = ((int)modelItem.PayType).ToString(),
+                                    PaymentDate = (modelItem.PaymentDate ?? DateTime.Today).ToString("yyyy-MM-dd"),
+                                    BusinessTypeCode = modelItem.BusinessTypeCode,
+                                    BusinessTypeName = modelItem.BusinessTypeName,
+                                    PayOrgCode = modelItem.PayOrgCode,
+                                    PayOrgName = modelItem.PayOrgName,
+                                    PayAccountNo = modelItem.PayAccountNo,
+                                    PayChannel = ((int)modelItem.PayChannel).ToString(),
+                                    PayAmount = modelItem.PayAmount.ToString("0.##"),
+                                    PayCurrencyType = string.IsNullOrWhiteSpace(modelItem.PayCurrencyType) ? "CNY" : modelItem.PayCurrencyType,
+                                    PayCurrencyName = string.IsNullOrWhiteSpace(modelItem.PayCurrencyName) ? "人民" : modelItem.PayCurrencyName,
+                                    WhetherUrgent = modelItem.WhetherUrgent ? "1" : "2",
+                                    Remark = modelItem.Remark,
+                                    PayUse = modelItem.PayUse,
+                                    Purpose = modelItem.Purpose,
+                                    PaymentRec = new PaymentOrdinarypayRequestV1.PaymentOrdinarypayRequestPaymentRec
+                                    {
+                                        ReceiveAccountNo = rec.ReceiveAccountNo,
+                                        ReceiveAccountName = rec.ReceiveAccountName,
+                                        ReceiveAreaNameOfProvince = rec.ReceiveAreaNameOfProvince,
+                                        ReceiveAreaNameOfCity = rec.ReceiveAreaNameOfCity,
+                                        ReceiveBranchCode = rec.ReceiveBranchCode,
+                                        ReceiveBranchName = rec.ReceiveBranchName,
+                                        ReceiveNature = string.Empty,
+                                        ReceiveCurrencyCode = string.IsNullOrWhiteSpace(rec.ReceiveCurrencyCode) ? "CNY" : rec.ReceiveCurrencyCode,
+                                        ReceiveCurrencyName = string.IsNullOrWhiteSpace(rec.ReceiveCurrencyName) ? "人民" : rec.ReceiveCurrencyName,
+                                    }
+                                };
+
+                                var ordinaryRes = await _czyApipService.PaymentOrdinaryPay(paramSet);
+                                res = ordinaryRes;
+                                resultSet = ordinaryRes?.ResultSet;
+                            }
+                            else if (modelItem.PayType == CzyPayTypeEnumType.批量付款)
+                            {
+                                var paramSet = new PaymentBatchpayRequestV1.PaymentBatchpayRequestParamSet
+                                {
+                                    BillsPayOrderNo = modelItem.BillsPayOrderNo,
+                                    PayType = ((int)modelItem.PayType).ToString(),
+                                    PaymentDate = (modelItem.PaymentDate ?? DateTime.Today).ToString("yyyy-MM-dd"),
+                                    BusinessTypeCode = modelItem.BusinessTypeCode,
+                                    BusinessTypeName = modelItem.BusinessTypeName,
+                                    PayOrgCode = modelItem.PayOrgCode,
+                                    PayOrgName = modelItem.PayOrgName,
+                                    PayAccountNo = modelItem.PayAccountNo,
+                                    PayChannel = ((int)modelItem.PayChannel).ToString(),
+                                    SumPayAmount = modelItem.PayAmount.ToString("0.##"),
+                                    PayCurrencyType = string.IsNullOrWhiteSpace(modelItem.PayCurrencyType) ? "CNY" : modelItem.PayCurrencyType,
+                                    PayCurrencyName = string.IsNullOrWhiteSpace(modelItem.PayCurrencyName) ? "人民" : modelItem.PayCurrencyName,
+                                    WhetherUrgent = modelItem.WhetherUrgent ? "1" : "2",
+                                    Remark = modelItem.Remark,
+                                    PayUse = modelItem.PayUse,
+                                    PaymentRecList = modelItem.Records.Select(f => new PaymentBatchpayRequestV1.PaymentBatchpayRequestPaymentRec
+                                    {
+                                        BillsPayOrderNo = f.BillsPayOrderNo,
+                                        PrivateAmount = f.PrivateAmount.ToString("0.##"),
+                                        ReceiveAccountNo = f.ReceiveAccountNo,
+                                        ReceiveAccountName = f.ReceiveAccountName,
+                                        ReceiveAreaNameOfProvince = f.ReceiveAreaNameOfProvince,
+                                        ReceiveAreaNameOfCity = f.ReceiveAreaNameOfCity,
+                                        ReceiveBranchCode = f.ReceiveBranchCode,
+                                        ReceiveBranchName = f.ReceiveBranchName,
+                                        ReceiveNature = string.Empty,
+                                        ReceiveCurrencyCode = string.IsNullOrWhiteSpace(f.ReceiveCurrencyCode) ? "CNY" : f.ReceiveCurrencyCode,
+                                        ReceiveCurrencyName = string.IsNullOrWhiteSpace(f.ReceiveCurrencyName) ? "人民" : f.ReceiveCurrencyName,
+                                        Summary = modelItem.PayUse,
+                                        Postscript = modelItem.Purpose,
+                                    }).ToList()
+                                };
+
+                                var batchPayRes = await _czyApipService.PaymentBatchPay(paramSet);
+                                res = batchPayRes;
+                                resultSet = batchPayRes?.ResultSet;
                             }
                             else
                             {
+                                throw new Exception($"不支持的付款类型：{(int)modelItem.PayType}");
+                            }
+
+                            modelItem.ReturnCode = res?.ReturnCode.ToString();
+                            modelItem.ReturnMsg = res?.ReturnMsg;
+                            modelItem.PushTime = DateTime.Now;
+                            if (res != null && res.IsSuccess)
+                            {
+                                modelItem.PushStatus = CzyPushStatusEnumType.推送成功;
                                 await _payOrderService.Update(modelItem);
                             }
+                            else
+                            {
+                                modelItem.PushStatus = CzyPushStatusEnumType.推送失败;
+                                if (resultSet != null && resultSet.Count > 0)
+                                {
+                                    modelItem.ReturnFailReasons = JsonConvert.SerializeObject(resultSet);
+                                    foreach (var fail in resultSet)
+                                    {
+                                        var detail = modelItem.Records.FirstOrDefault(f => f.BillsPayOrderNo == fail.BillsPayOrderNo);
+                                        if (detail != null)
+                                        {
+                                            detail.FailReasons = fail.FailReasons;
+                                        }
+                                    }
+                                    await _payOrderService.UpdateNav(modelItem);
+                                }
+                                else
+                                {
+                                    await _payOrderService.Update(modelItem);
+                                }
+                            }
                         }
-                    }
-                    catch (Exception ex)
-                    {
+                        catch (Exception ex)
+                        {
                             // 只捕获异常
-                        modelItem.ReturnCode = "-1";
-                        modelItem.ReturnMsg = ex.Message;
-                        modelItem.PushStatus = CzyPushStatusEnumType.推送失败;
-                        modelItem.PushTime = DateTime.Now;
-                        await _payOrderService.Update(modelItem);
+                            modelItem.ReturnCode = "-1";
+                            modelItem.ReturnMsg = ex.Message;
+                            modelItem.PushStatus = CzyPushStatusEnumType.推送失败;
+                            modelItem.PushTime = DateTime.Now;
+                            await _payOrderService.Update(modelItem);
                             // 记录异常
                             StaticLog.Debug($"Bank_推送失败_id:{modelItem.ID.ToString()}" + ex.Message, ex);
+                        }
                     }
-                }
 
-                var noticeJson = JsonConvert.SerializeObject(new PaymentOrderPushNoticeDto
-                {
-                    RelBillsCode = modelItem.RelBillsCode,
-                    BillsPayOrderNo = modelItem.BillsPayOrderNo,
-                    IsSuccess = modelItem.PushStatus == CzyPushStatusEnumType.推送成功,
-                    ReturnCode = modelItem.ReturnCode,
-                    ReturnMsg = modelItem.ReturnMsg,
-                    PushTime = modelItem.PushTime
-                });
-                await _httpService.PostAsync(ServiceNames.FinanceService, "/api/BusNotice/PaymentOrderPushNotice", noticeJson);
-            }
+                    var noticeJson = JsonConvert.SerializeObject(new PaymentOrderPushNoticeDto
+                    {
+                        RelBillsCode = modelItem.RelBillsCode,
+                        BillsPayOrderNo = modelItem.BillsPayOrderNo,
+                        IsSuccess = modelItem.PushStatus == CzyPushStatusEnumType.推送成功,
+                        ReturnCode = modelItem.ReturnCode,
+                        ReturnMsg = modelItem.ReturnMsg,
+                        PushTime = modelItem.PushTime
+                    });
+                    await _httpService.PostAsync(ServiceNames.FinanceService, "/api/BusNotice/PaymentOrderPushNotice", noticeJson);
+                }
             }
             catch (Exception ex)
             {

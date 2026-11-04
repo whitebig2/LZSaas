@@ -3,6 +3,7 @@ using LZ.Core;
 using LZ.Core.RabbitMQ.EventBus;
 using Senparc.Weixin.WxOpen.AdvancedAPIs.WxApp.WxAppJson;
 
+Console.Title = "- »ù´¡·þÎñ";
 
 var appModel = new LZ.Model.AppliationModel();
 appModel.ModuleKey = "basic-api";

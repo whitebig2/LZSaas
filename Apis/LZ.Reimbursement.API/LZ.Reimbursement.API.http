@@ -1,0 +1,6 @@
+@LZ.Reimbursement.API_HostAddress = http://localhost:5206
+
+GET {{LZ.Reimbursement.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

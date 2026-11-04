@@ -1,3 +1,7 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace LZ.Model.BaiWangModel
 {
     /// <summary>
@@ -130,9 +134,9 @@ namespace LZ.Model.BaiWangModel
         public string? goodsTotalTax { get; set; }
     }
 
-        /// <summary>
+    /// <summary>
     /// 差额凭证信息(差额征税标签为02时必填)
-        /// </summary>
+    /// </summary>
     public class BaiWangBalanceInfoList
     {
         /// <summary>
@@ -442,6 +446,114 @@ namespace LZ.Model.BaiWangModel
         /// 回调地址
         /// </summary>
         public string? callBackUrl { get; set; }
+    }
+
+    /// <summary>
+    /// 百望发送企业邀请
+    /// </summary>
+    public class BaiWangOpenOrgRelApiRequest
+    {
+        /// <summary>
+        /// 发起邀请的税号
+        /// </summary>
+        public string taxCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 被邀请的企业税号
+        /// </summary>
+        public string toTaxCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 关系类型
+        /// </summary>
+        public List<long>? relTypes { get; set; }
+
+        /// <summary>
+        /// 授权业务
+        /// </summary>
+        public List<long>? authTypes { get; set; }
+
+        /// <summary>
+        /// 创建人
+        /// </summary>
+        public string? creater { get; set; }
+
+        /// <summary>
+        /// 来源
+        /// </summary>
+        public long? sourceFlag { get; set; }
+
+        /// <summary>
+        /// 邮件/出参url类型
+        /// </summary>
+        public int? relUrlType { get; set; }
+    }
+
+    /// <summary>
+    /// 百望开放平台授权通知回调
+    /// </summary>
+    public class BaiWangOrgAuthCallbackRequest
+    {
+        /// <summary>
+        /// 应用标识
+        /// </summary>
+        [JsonConverter(typeof(FlexibleStringJsonConverter))]
+        public string? appKey { get; set; }
+
+        /// <summary>
+        /// 税号
+        /// </summary>
+        [JsonConverter(typeof(FlexibleStringJsonConverter))]
+        public string? taxNo { get; set; }
+
+        /// <summary>
+        /// 机构授权码
+        /// </summary>
+        [JsonConverter(typeof(FlexibleStringJsonConverter))]
+        public string? orgAuthCode { get; set; }
+
+        /// <summary>
+        /// 操作时间
+        /// </summary>
+        [JsonConverter(typeof(FlexibleStringJsonConverter))]
+        public string? opeTime { get; set; }
+
+        /// <summary>
+        /// 操作类型
+        /// </summary>
+        [JsonConverter(typeof(FlexibleStringJsonConverter))]
+        public string? opeType { get; set; }
+    }
+
+    /// <summary>
+    /// 兼容百望回调里字符串或数字两种写法
+    /// </summary>
+    public class FlexibleStringJsonConverter : JsonConverter<string?>
+    {
+        public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            return reader.TokenType switch
+            {
+                JsonTokenType.String => reader.GetString(),
+                JsonTokenType.Number => reader.TryGetInt64(out var longValue)
+                    ? longValue.ToString(CultureInfo.InvariantCulture)
+                    : reader.GetDecimal().ToString(CultureInfo.InvariantCulture),
+                JsonTokenType.True => "true",
+                JsonTokenType.False => "false",
+                JsonTokenType.Null => null,
+                _ => throw new JsonException("无法读取回调字段")
+            };
+        }
+
+        public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
+        {
+            if (value == null)
+            {
+                writer.WriteNullValue();
+                return;
+            }
+            writer.WriteStringValue(value);
+        }
     }
 
 }

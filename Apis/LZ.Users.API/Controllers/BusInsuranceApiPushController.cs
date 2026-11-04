@@ -38,7 +38,9 @@ namespace LZ.Users.API.Controllers
             IBusInsuracneService busInsuracneService,
             IBusInsuranceDayMatchRecordService dayMatchRecordService,
             IRedisService redisService,
-            IThirtySixService thirtySixService)
+            IThirtySixService thirtySixService,
+            IMailSenderService mailSenderService,
+            IBusInsuranceRecordService recordService)
         {
             _service = service;
             _busInsuracneService = busInsuracneService;
@@ -252,55 +254,55 @@ namespace LZ.Users.API.Controllers
 
             if (model.InsuranceCompany == "大地365")
             {
-            var defaultDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
-            if (model.PushType == "新增")
-            {
-                var addRecords = model.Details.Select(f => new ThirtySixAddRecord
+                var defaultDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
+                if (model.PushType == "新增")
                 {
-                    InsuredName = f.Name,
-                    DocumentType = "身份证",
-                    IdNumber = f.CardID,
-                    Phone = f.Phone ?? string.Empty,
-                    ActualInsuredCustomers = f.CustomerName,
-                    PolicyNumber = f.OrderNo,
-                    PlanInfoName = f.PlanName,
-                    Profession = string.IsNullOrWhiteSpace(f.InsuranceWorkName) ? f.WorkName : f.InsuranceWorkName,
-                    EffectiveDate = string.IsNullOrWhiteSpace(f.StartDate) ? defaultDate : f.StartDate,
-                    HasSocialS = f.IsSocial ? "是" : "否",
-                    RelatedHeightS = f.IsWorkHeight ? "是" : "否",
-                    Remark = f.Remark ?? string.Empty,
-                }).ToList();
+                    var addRecords = model.Details.Select(f => new ThirtySixAddRecord
+                    {
+                        InsuredName = f.Name,
+                        DocumentType = "身份证",
+                        IdNumber = f.CardID,
+                        Phone = f.Phone ?? string.Empty,
+                        ActualInsuredCustomers = f.CustomerName,
+                        PolicyNumber = f.OrderNo,
+                        PlanInfoName = f.PlanName,
+                        Profession = string.IsNullOrWhiteSpace(f.InsuranceWorkName) ? f.WorkName : f.InsuranceWorkName,
+                        EffectiveDate = string.IsNullOrWhiteSpace(f.StartDate) ? defaultDate : f.StartDate,
+                        HasSocialS = f.IsSocial ? "是" : "否",
+                        RelatedHeightS = f.IsWorkHeight ? "是" : "否",
+                        Remark = f.Remark ?? string.Empty,
+                    }).ToList();
 
-                var res = await _thirtySixService.PushAdd(addRecords);
-                ApplyPushResult(model, res, isReplace: false);
-            }
-            else if (model.PushType == "替换")
-            {
-                var replaceRecords = model.Details.Select(f => new ThirtySixReplaceRecord
+                    var res = await _thirtySixService.PushAdd(addRecords);
+                    ApplyPushResult(model, res, isReplace: false);
+                }
+                else if (model.PushType == "替换")
                 {
-                    InsuredName = f.Name,
-                    DocumentType = "身份证",
-                    IdNumber = f.CardID,
-                    Phone = f.Phone ?? string.Empty,
-                    ActualInsuredCustomers = f.CustomerName,
-                    PolicyNumber = f.OrderNo,
-                    PlanInfoName = f.PlanName,
-                    Profession = f.InsuranceWorkName,
-                    EffectiveDate = string.IsNullOrWhiteSpace(f.StartDate) ? defaultDate : f.StartDate,
-                    HasSocialS = f.IsSocial ? "是" : "否",
-                    RelatedHeightS = f.IsWorkHeight ? "是" : "否",
-                    Remark = f.Remark ?? string.Empty,
-                    AttritionInsuredName = f.DelName,
-                    AttritionIdNumber = f.DelCardID,
-                }).ToList();
+                    var replaceRecords = model.Details.Select(f => new ThirtySixReplaceRecord
+                    {
+                        InsuredName = f.Name,
+                        DocumentType = "身份证",
+                        IdNumber = f.CardID,
+                        Phone = f.Phone ?? string.Empty,
+                        ActualInsuredCustomers = f.CustomerName,
+                        PolicyNumber = f.OrderNo,
+                        PlanInfoName = f.PlanName,
+                        Profession = f.InsuranceWorkName,
+                        EffectiveDate = string.IsNullOrWhiteSpace(f.StartDate) ? defaultDate : f.StartDate,
+                        HasSocialS = f.IsSocial ? "是" : "否",
+                        RelatedHeightS = f.IsWorkHeight ? "是" : "否",
+                        Remark = f.Remark ?? string.Empty,
+                        AttritionInsuredName = f.DelName,
+                        AttritionIdNumber = f.DelCardID,
+                    }).ToList();
 
-                var res = await _thirtySixService.PushReplace(replaceRecords);
-                ApplyPushResult(model, res, isReplace: true);
-            }
-            else
-            {
-                throw new ErrorCodeException(-1, $"不支持的推送类型：{model.PushType}");
-            }
+                    var res = await _thirtySixService.PushReplace(replaceRecords);
+                    ApplyPushResult(model, res, isReplace: true);
+                }
+                else
+                {
+                    throw new ErrorCodeException(-1, $"不支持的推送类型：{model.PushType}");
+                }
                 await _service.UpdateNav(model);
             }
             else if (model.InsuranceCompany == "阳光保险公司-新")
@@ -360,7 +362,7 @@ namespace LZ.Users.API.Controllers
                         if (isSuc)
                         {
                             model.Status = BusInsuranceApiPushStatusEnumType.已推送待确认;
-            await _service.UpdateNav(model);
+                            await _service.UpdateNav(model);
                         }
                         else
                         {
@@ -386,7 +388,11 @@ namespace LZ.Users.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Confirm([FromForm] Guid id)
         {
-            await _service.Confirm(id);
+            var today = DateTime.Today;
+            var nextDay = DateTime.Today.AddDays(1);
+            var insuranceMonth = today.AddDays(1 - today.Day);
+            var insuranceMonthEnd = insuranceMonth.AddMonths(1).AddDays(-1);
+      
             var model = await _service.GetNav(f => f.ID == id);
             if (model.Status!= BusInsuranceApiPushStatusEnumType.已推送待确认)
             {
@@ -396,39 +402,39 @@ namespace LZ.Users.API.Controllers
 
             if (model.InsuranceCompany == "大地365")
             {
-            if (model?.Details != null && model.Details.Count > 0)
-            {
-                var businessIds = model.Details
-                    .SelectMany(f => new[] { f.AddBusinessID, f.DelBusinessID })
-                    .Where(f => f > 0)
-                    .Distinct()
-                    .ToList();
-                if (businessIds.Count > 0)
+                if (model?.Details != null && model.Details.Count > 0)
                 {
-                    var matchRecords = await _dayMatchRecordService.List(f => businessIds.Contains(f.ID));
-                    if (matchRecords.Any())
+                    var businessIds = model.Details
+                        .SelectMany(f => new[] { f.AddBusinessID, f.DelBusinessID })
+                        .Where(f => f > 0)
+                        .Distinct()
+                        .ToList();
+                    if (businessIds.Count > 0)
                     {
-                        foreach (var item in matchRecords)
+                        var matchRecords = await _dayMatchRecordService.List(f => businessIds.Contains(f.ID));
+                        if (matchRecords.Any())
                         {
-                            item.Status = BusInsuranceDayMatchRecordStatusEnumType.已推送;
-                        }
-                        await _dayMatchRecordService.Update(matchRecords);
-                        var addIds = model.Details.Select(f => f.AddBusinessID).ToList();
-                        var delIds = model.Details.Select(f => f.DelBusinessID).ToList();
-                        await _busInsuracneService.PushCompleted36k(addIds, delIds);
+                            foreach (var item in matchRecords)
+                            {
+                                item.Status = BusInsuranceDayMatchRecordStatusEnumType.已推送;
+                            }
+                            await _dayMatchRecordService.Update(matchRecords);
+                            var addIds = model.Details.Select(f => f.AddBusinessID).ToList();
+                            var delIds = model.Details.Select(f => f.DelBusinessID).ToList();
+                            await _busInsuracneService.PushCompleted36k(addIds, delIds);
 
                             await _service.Confirm(id);
                         }
                     }
-                    }
-
                 }
+
+            }
             else {
                 if (model?.Details != null && model.Details.Count > 0)
                 {
                         var dayMatchRecordIds = model.Details.Select(f => f.DayMatchRecordID??0);
                         var recordIds = model.Details.Select(f => f.InsuranceRecordID??0);
-                        if (dayMatchRecordIds.Any())
+                        if (dayMatchRecordIds.Any()|| recordIds.Any())
                         {
 
 
@@ -441,7 +447,7 @@ namespace LZ.Users.API.Controllers
                                     foreach (var matchRecord in matchRecordList)
                                     {
                                         matchRecord.Status = BusInsuranceDayMatchRecordStatusEnumType.已推送;
-            }
+                                    }
                                     // 生成保全就
                                     var records = matchRecordList.Select(f => new Live_BusInsuranceRecord()
                                     {
@@ -519,7 +525,8 @@ namespace LZ.Users.API.Controllers
                                         }
                                         await _recordService.Update(records);
                                     }
-                                    DbScoped.SugarScope.CommitTran();
+                                await _service.Confirm(id);
+                                DbScoped.SugarScope.CommitTran();
                                     }
                                     catch (Exception ex)
                                     {
@@ -645,7 +652,7 @@ namespace LZ.Users.API.Controllers
             var isb = await _redisService.SetAsync("PushDaDi365ProcessJob", "PushDaDi365ProcessJob", 60, CSRedis.RedisExistence.Nx);
             if (isb)
             {
-                var pendingPushes = await _service.List(f => f.Status != BusInsuranceApiPushStatusEnumType.已确认 && f.Status != BusInsuranceApiPushStatusEnumType.作废);
+                var pendingPushes = await _service.List(f => f.InsuranceCompany == "大地365" && f.Status != BusInsuranceApiPushStatusEnumType.已确认 && f.Status != BusInsuranceApiPushStatusEnumType.作废);
                 if (pendingPushes.Any())
                 {
                     foreach (var item in pendingPushes)
@@ -684,7 +691,7 @@ namespace LZ.Users.API.Controllers
                 await _busInsuracneService.PushNewYangGuangProcess();
 
                 return Ok(new { isSuccess = true, msg = "成功" });
-        }
+            }
             else
             {
                 return Ok(new { isSuccess = false, msg = "一分钟内只能推送一次" });

@@ -25,7 +25,7 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
         get
         {
             if (!_user.IsAuthenticated || _user.CompanyID <= 0 || _user.UserID <= 0 ||
-                _user.PlatformType != PlatformType.XFZMini)
+                _user.PlatformType != PlatformType.LZMini)
                 throw new UnauthorizedAccessException("仅当前企业的小程序用户可访问本人报销记录");
             return _user.CompanyID;
         }

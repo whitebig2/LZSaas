@@ -23,9 +23,9 @@ public class BillQueryelectronicreceiptRequestV1 : ApipRequest<BillQueryelectron
         [JsonPropertyName("TransType")]
         public string TransType { get; set; }
 
-        /// <summary>查询类型：1通用型单笔 2通用型汇总。</summary>
-        [JsonPropertyName("QueryType")]
-        public string QueryType { get; set; }
+        ///// <summary>查询类型：1通用型单笔 2通用型汇总。</summary>
+        //[JsonPropertyName("QueryType")]
+        //public string QueryType { get; set; }
 
         /// <summary>账户账号。</summary>
         [JsonPropertyName("AcctNo")]
@@ -51,7 +51,7 @@ public class BillQueryelectronicreceiptRequestV1 : ApipRequest<BillQueryelectron
         {
             BillQueryelectronicreceiptRequestParamSet item = new BillQueryelectronicreceiptRequestParamSet();
             item.TransType = "A";
-            item.QueryType = "1";
+            //item.QueryType = "1";
             item.AcctNo = "0302099619100000000";
             item.CurrencyCode = "CNY";
             item.BeginDate = "20260916";

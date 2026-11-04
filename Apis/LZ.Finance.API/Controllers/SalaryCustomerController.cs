@@ -6005,6 +6005,7 @@ namespace LZ.Finance.API.Controllers
                     CardID = f.IdCardNo,
                     BankName = f.Bank,
                     BankNo = f.BankNo,
+                    BankBranceCode = f.BankBranceCode,
                     TransAmount = f.ActualSalarySendCardAmount,
                     BillsPayOrderNo = Guid.NewGuid().ToString(),
                 }).ToList(),
@@ -6063,6 +6064,7 @@ namespace LZ.Finance.API.Controllers
                 CardID = f.IdCardNo,
                 BankName = f.Bank,
                 BankNo = f.BankNo,
+                BankBranceCode = f.BankBranceCode,
                 TransAmount = f.ActualSalarySendCardAmount,
             }).ToList();
 
@@ -6117,8 +6119,8 @@ namespace LZ.Finance.API.Controllers
                 Remark = string.Empty,
                 DataType = TransactionDataTypeEnumType.客户工资,
                 PayType = CzyPayTypeEnumType.批量对私,
-                PayChannel = CzyPayChannelEnumType.线下支付,
-                WhetherUrgent = false,
+                PayChannel = CzyPayChannelEnumType.直联支付,
+                WhetherUrgent = true,
                 PaymentDate = DateTime.Today,
                 PaymentAccountID = account.ID,
                 PayAccountNo = account.AccountNo,

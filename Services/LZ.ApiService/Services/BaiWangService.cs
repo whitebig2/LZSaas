@@ -1,8 +1,10 @@
+using Aliyun.Acs.Ram.Model.V20150501;
 using LZ.ApiService.Helper;
 using LZ.ApiService.Interface;
 using LZ.Core.Interface;
 using LZ.Core.Redis;
 using LZ.Model.BaiWangModel;
+using LZ.Model.BaiWangModel.Taxs;
 using LZ.Model.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,32 +39,46 @@ namespace LZ.ApiService.Services
 
         public Task<BaiWangResponse<BaiWangAddPreInvoiceResponse>> AddPreInvoiceAsync(BaiWangAddPreInvoiceRequest request)
         {
-            return ExecuteAsync<BaiWangAddPreInvoiceRequest, BaiWangAddPreInvoiceResponse>(_option.AddPreInvoiceMethod, request);
+            return ExecuteAsync<BaiWangAddPreInvoiceRequest, BaiWangAddPreInvoiceResponse>(_option.AddPreInvoiceMethod, request, "");
+        }
+
+        /// <summary>
+        /// 调用百望云发票真伪查验接口；ExecuteAsync 负责获取 token、签名及发送请求。
+        /// </summary>
+        public Task<BaiWangResponse<BaiWangInvoiceValidationResponse>> VerifyInvoiceAuthenticityAsync(BaiWangInvoiceValidationRequest request)
+        {
+            return ExecuteAsync<BaiWangInvoiceValidationRequest, BaiWangInvoiceValidationResponse>(
+                "baiwang.input.compliance.validate", request, "");
         }
 
         public Task<BaiWangResponse<BaiWangQueryPreInvoiceResponse>> QueryPreInvoiceAsync(BaiWangQueryPreInvoiceRequest request)
         {
-            return ExecuteAsync<BaiWangQueryPreInvoiceRequest, BaiWangQueryPreInvoiceResponse>(_option.QueryPreInvoiceMethod, request);
+            return ExecuteAsync<BaiWangQueryPreInvoiceRequest, BaiWangQueryPreInvoiceResponse>(_option.QueryPreInvoiceMethod, request, "");
         }
 
-        public Task<BaiWangResponse<BaiWangQueryInvoiceResponse>> QueryInvoiceAsync(BaiWangQueryInvoiceRequest request)
+        public Task<BaiWangResponse<BaiWangQueryInvoiceResponse>> QueryInvoiceAsync(BaiWangQueryInvoiceRequest request, string authcode)
         {
-            return ExecuteAsync<BaiWangQueryInvoiceRequest, BaiWangQueryInvoiceResponse>(_option.QueryInvoiceMethod, request);
+            return ExecuteAsync<BaiWangQueryInvoiceRequest, BaiWangQueryInvoiceResponse>(_option.QueryInvoiceMethod, request, authcode);
         }
 
-        public Task<BaiWangResponse<BaiWangIssueInvoiceResponse>> IssueInvoiceAsync(BaiWangIssueInvoiceRequest request)
+        public Task<BaiWangResponse<BaiWangIssueInvoiceResponse>> IssueInvoiceAsync(BaiWangIssueInvoiceRequest request, string authcode)
         {
-            return ExecuteAsync<BaiWangIssueInvoiceRequest, BaiWangIssueInvoiceResponse>(_option.IssueInvoiceMethod, request);
+            return ExecuteAsync<BaiWangIssueInvoiceRequest, BaiWangIssueInvoiceResponse>(_option.IssueInvoiceMethod, request, authcode);
         }
 
-        public Task<BaiWangResponse<BaiWangFastRedResponse>> IssueFastRedAsync(BaiWangFastRedRequest request)
+        public Task<BaiWangResponse<BaiWangFastRedResponse>> IssueFastRedAsync(BaiWangFastRedRequest request, string authcode)
         {
-            return ExecuteAsync<BaiWangFastRedRequest, BaiWangFastRedResponse>(_option.IssueFastRedMethod, request);
+            return ExecuteAsync<BaiWangFastRedRequest, BaiWangFastRedResponse>(_option.IssueFastRedMethod, request, authcode);
         }
 
-        public Task<BaiWangResponse<BaiWangRedConfirmResponse>> IssueRedConfirmAsync(BaiWangRedConfirmRequest request)
+        public Task<BaiWangResponse<BaiWangRedConfirmResponse>> IssueRedConfirmAsync(BaiWangRedConfirmRequest request, string authcode)
         {
-            return ExecuteAsync<BaiWangRedConfirmRequest, BaiWangRedConfirmResponse>(_option.IssueRedConfirmMethod, request);
+            return ExecuteAsync<BaiWangRedConfirmRequest, BaiWangRedConfirmResponse>(_option.IssueRedConfirmMethod, request, authcode);
+        }
+
+        public Task<BaiWangResponse<List<BaiWangOpenOrgRelApi>>> OpenOrgRelApiAsync(BaiWangOpenOrgRelApiRequest request)
+        {
+            return ExecuteAsync<BaiWangOpenOrgRelApiRequest, List<BaiWangOpenOrgRelApi>>("baiwang.usercenter.org.addOpenOrgRelApi", request, _option.OrgAuthCode);
         }
 
         public async Task<BaiWangTokenResponse> GetTokenAsync(bool cacheToken = false)
@@ -80,29 +96,34 @@ namespace LZ.ApiService.Services
                 }
             }
 
-            var tokenResponse = await RequestTokenByPostAsync();
+            var tokenResponse = await RequestTokenByPostAsync("");
             if (cacheToken)
             {
                 await CacheTokenAsync(tokenResponse);
             }
-
             return tokenResponse;
         }
 
-        private async Task<string> GetAccessTokenAsync()
+        private async Task<string> GetAccessTokenAsync(string orgAuthCode)
         {
-            var accessToken = await _redisService.GetAsync<string>(_option.CacheKey);
-            if (!string.IsNullOrWhiteSpace(accessToken))
+            //var accessToken = await _redisService.GetAsync<string>(_option.CacheKey);
+            //if (!string.IsNullOrWhiteSpace(accessToken))
+            //{
+            //    return accessToken;
+            //}
+            try
             {
-                return accessToken;
+                var tokenResponse = await RequestTokenByPostAsync(orgAuthCode);
+                //await CacheTokenAsync(tokenResponse);
+                return tokenResponse.access_token;
             }
-
-            var tokenResponse = await RequestTokenByPostAsync();
-            await CacheTokenAsync(tokenResponse);
-            return tokenResponse.access_token;
+           catch(Exception e)
+            {
+                throw new InvalidOperationException(orgAuthCode + "|" +e.ToString());
+            }
         }
 
-        private async Task<BaiWangTokenResponse> RequestTokenByPostAsync()
+        private async Task<BaiWangTokenResponse> RequestTokenByPostAsync(string orgAuthCode)
         {
             var jsonData = new Dictionary<string, string>
             {
@@ -110,6 +131,10 @@ namespace LZ.ApiService.Services
                 ["username"] = _option.UserName,
                 ["password"] = BaiWangHelper.EncryptPassword(_option.Password, _option.Salt)
             };
+            if (!string.IsNullOrEmpty(orgAuthCode))
+            {
+                jsonData.Add("orgAuthCode", orgAuthCode);
+            }
             var tokenUrl = GetApiRootUrl();
             Dictionary<string, string> dic = new Dictionary<string, string>();
             dic.Add("timestamp", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
@@ -119,8 +144,9 @@ namespace LZ.ApiService.Services
             dic.Add("client_id", _option.AppKey);
             dic.Add("encryptScope", "00");
             dic.Add("encryptType", "NONE");
+            string aa = JsonConvert.SerializeObject(dic);
             var query = string.Join("&", dic.Select(item =>
-                $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value)}"));
+                    $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value)}"));
             var url = $"{GetApiRootUrl()}?{query}";
             //var url = tokenUrl + "?" + DictionaryToQueryString(dic);
             var client = _httpClientFactory.CreateClient();
@@ -143,7 +169,7 @@ namespace LZ.ApiService.Services
                 var errorMessage = tokenResponse?.error_description ?? tokenResponse?.error ?? responseContent;
                 throw new InvalidOperationException($"百望获取Token失败：{errorMessage}");
             }
-
+           
             return tokenResponse;
         }
 
@@ -186,16 +212,221 @@ namespace LZ.ApiService.Services
 
 
 
-        public record TaxEnterpriseInfoQueryReqRecord(string BelongTaxNo, string CustomerTaxNo,string Method);
-        public Task<BaiWangResponse<BaiWangQueryInvoiceResponse>> TaxEnterpriseInfoQuery(string belongTaxNo,string customerTaxNo)
+        /// <summary>
+        /// 个人养老金下载
+        /// </summary>
+        public Task<BaiWangResponse<PersonalPensionDownloadResponse>> PersonalPensionDownloadAsync(PersonalPensionDownloadRequest request)
         {
-            TaxEnterpriseInfoQueryReqRecord request = new TaxEnterpriseInfoQueryReqRecord(belongTaxNo, customerTaxNo, "baiwang.cs.investor.enterprise_info_query");
-            return ExecuteAsync<TaxEnterpriseInfoQueryReqRecord, BaiWangQueryInvoiceResponse>("baiwang.cs.investor.enterprise_info_query", request);
+            return ExecuteAsync<PersonalPensionDownloadRequest, PersonalPensionDownloadResponse>("baiwang.cs.personal.pensionDownload", request, "");
         }
 
-        private async Task<BaiWangResponse<TResponse>> ExecuteAsync<TRequest, TResponse>(string method, TRequest request)
+        /// <summary>
+        /// 个税收入明细删除
+        /// </summary>
+        public Task<BaiWangResponse<PersonalTaxIncomeFormDeleteResponse>> PersonalTaxIncomeFormDeleteAsync(PersonalTaxIncomeFormDeleteRequest request)
         {
-            var accessToken = await GetAccessTokenAsync();
+            return ExecuteAsync<PersonalTaxIncomeFormDeleteRequest, PersonalTaxIncomeFormDeleteResponse>("baiwang.cs.personalTaxIncomeFormDelete", request, "");
+        }
+
+        /// <summary>
+        /// 同步客户信息
+        /// </summary>
+        public Task<BaiWangResponse<PersonalSyncCustomerInfoResponse>> PersonalSyncCustomerInfoAsync(PersonalSyncCustomerInfoRequest request)
+        {
+            return ExecuteAsync<PersonalSyncCustomerInfoRequest, PersonalSyncCustomerInfoResponse>("baiwang.cs.personal.syncCustomerInfo", request, "");
+        }
+
+        /// <summary>
+        /// 个税申报
+        /// </summary>
+        public Task<BaiWangResponse<PersonalDeclareResponse>> PersonalDeclareAsync(PersonalDeclareRequest request)
+        {
+            return ExecuteAsync<PersonalDeclareRequest, PersonalDeclareResponse>("baiwang.cs.personal.declare", request, "");
+        }
+
+        /// <summary>
+        /// 同步客户账号信息
+        /// </summary>
+        public Task<BaiWangResponse<PersonalSyncCustomerAccountInfoResponse>> PersonalSyncCustomerAccountInfoAsync(PersonalSyncCustomerAccountInfoRequest request)
+        {
+            return ExecuteAsync<PersonalSyncCustomerAccountInfoRequest, PersonalSyncCustomerAccountInfoResponse>("baiwang.cs.personal.syncCustomerAccountInfo", request, "");
+        }
+
+        /// <summary>
+        /// 三方协议缴款
+        /// </summary>
+        public Task<BaiWangResponse<PersonalTripleAgreementPaymentResponse>> PersonalTripleAgreementPaymentAsync(PersonalTripleAgreementPaymentRequest request)
+        {
+            return ExecuteAsync<PersonalTripleAgreementPaymentRequest, PersonalTripleAgreementPaymentResponse>("baiwang.cs.personal.tripleAgreementPayment", request, "");
+        }
+
+        /// <summary>
+        /// 三方协议下载
+        /// </summary>
+        public Task<BaiWangResponse<PersonalTripleAgreementDownloadResponse>> PersonalTripleAgreementDownloadAsync(PersonalTripleAgreementDownloadRequest request)
+        {
+            return ExecuteAsync<PersonalTripleAgreementDownloadRequest, PersonalTripleAgreementDownloadResponse>("baiwang.cs.personal.tripleAgreementDownload", request, "");
+        }
+
+        /// <summary>
+        /// 完税证明开具
+        /// </summary>
+        public Task<BaiWangResponse<PersonalCertificateIssueResponse>> PersonalCertificateIssueAsync(PersonalCertificateIssueRequest request)
+        {
+            return ExecuteAsync<PersonalCertificateIssueRequest, PersonalCertificateIssueResponse>("baiwang.cs.personal.certificateIssue", request, "");
+        }
+
+        /// <summary>
+        /// 专项附加扣除下载
+        /// </summary>
+        public Task<BaiWangResponse<PersonalAdditionDownloadResponse>> PersonalAdditionDownloadAsync(PersonalAdditionDownloadRequest request)
+        {
+            return ExecuteAsync<PersonalAdditionDownloadRequest, PersonalAdditionDownloadResponse>("baiwang.cs.personal.additionDownload", request, "");
+        }
+
+        /// <summary>
+        /// 个税收入明细查询
+        /// </summary>
+        public Task<BaiWangResponse<PersonalTaxIncomeFormQueryResponse>> PersonalTaxIncomeFormQueryAsync(PersonalTaxIncomeFormQueryRequest request)
+        {
+            return ExecuteAsync<PersonalTaxIncomeFormQueryRequest, PersonalTaxIncomeFormQueryResponse>("baiwang.cs.personalTaxIncomeFormQuery", request, "");
+        }
+
+        /// <summary>
+        /// 个税收入明细保存
+        /// </summary>
+        public Task<BaiWangResponse<PersonalTaxIncomeFormSaveResponse>> PersonalTaxIncomeFormSaveAsync(PersonalTaxIncomeFormSaveRequest request)
+        {
+            return ExecuteAsync<PersonalTaxIncomeFormSaveRequest, PersonalTaxIncomeFormSaveResponse>("baiwang.cs.personalTaxIncomeFormSave", request, "");
+        }
+
+        /// <summary>
+        /// 人员信息保存
+        /// </summary>
+        public Task<BaiWangResponse<PersonalUserSaveResponse>> PersonalUserSaveAsync(PersonalUserSaveRequest request)
+        {
+            return ExecuteAsync<PersonalUserSaveRequest, PersonalUserSaveResponse>("baiwang.cs.personal.userSave", request, "");
+        }
+
+        /// <summary>
+        /// 开始更正
+        /// </summary>
+        public Task<BaiWangResponse<PersonalStartCorrectionResponse>> PersonalStartCorrectionAsync(PersonalStartCorrectionRequest request)
+        {
+            return ExecuteAsync<PersonalStartCorrectionRequest, PersonalStartCorrectionResponse>("baiwang.cs.personal.start_correction", request, "");
+        }
+
+        /// <summary>
+        /// 作废申报
+        /// </summary>
+        public Task<BaiWangResponse<PersonalInvalidDeclareResponse>> PersonalInvalidDeclareAsync(PersonalInvalidDeclareRequest request)
+        {
+            return ExecuteAsync<PersonalInvalidDeclareRequest, PersonalInvalidDeclareResponse>("baiwang.cs.personal.invalid_declare", request, "");
+        }
+
+        /// <summary>
+        /// 取消更正
+        /// </summary>
+        public Task<BaiWangResponse<PersonalCancelCorrectionResponse>> PersonalCancelCorrectionAsync(PersonalCancelCorrectionRequest request)
+        {
+            return ExecuteAsync<PersonalCancelCorrectionRequest, PersonalCancelCorrectionResponse>("baiwang.cs.personal.cancel_correction", request, "");
+        }
+
+        /// <summary>
+        /// 下载累计数据
+        /// </summary>
+        public Task<BaiWangResponse<PersonalDownloadCumulativeDataResponse>> PersonalDownloadCumulativeDataAsync(PersonalDownloadCumulativeDataRequest request)
+        {
+            return ExecuteAsync<PersonalDownloadCumulativeDataRequest, PersonalDownloadCumulativeDataResponse>("baiwang.cs.personal.download_cumulative_data", request, "");
+        }
+
+        /// <summary>
+        /// 复制上月工资薪金
+        /// </summary>
+        public Task<BaiWangResponse<PersonalCopyLastMonthSalaryWagesResponse>> PersonalCopyLastMonthSalaryWagesAsync(PersonalCopyLastMonthSalaryWagesRequest request)
+        {
+            return ExecuteAsync<PersonalCopyLastMonthSalaryWagesRequest, PersonalCopyLastMonthSalaryWagesResponse>("baiwang.cs.personal.copyLastMonthSalaryWages", request, "");
+        }
+
+        /// <summary>
+        /// 人员列表查询
+        /// </summary>
+        public Task<BaiWangResponse<InvestorUserListQueryResponse>> InvestorUserListQueryAsync(InvestorUserListQueryRequest request)
+        {
+            return ExecuteAsync<InvestorUserListQueryRequest, InvestorUserListQueryResponse>("baiwang.cs.investor.user_list_query", request, "");
+        }
+
+        /// <summary>
+        /// 商业健康险编辑
+        /// </summary>
+        public Task<BaiWangResponse<InvestorCommercialHealthEditResponse>> InvestorCommercialHealthEditAsync(InvestorCommercialHealthEditRequest request)
+        {
+            return ExecuteAsync<InvestorCommercialHealthEditRequest, InvestorCommercialHealthEditResponse>("baiwang.cs.investor.commercial_health_edit", request, "");
+        }
+
+        /// <summary>
+        /// 商业健康险查询
+        /// </summary>
+        public Task<BaiWangResponse<InvestorCommercialHealthQueryResponse>> InvestorCommercialHealthQueryAsync(InvestorCommercialHealthQueryRequest request)
+        {
+            return ExecuteAsync<InvestorCommercialHealthQueryRequest, InvestorCommercialHealthQueryResponse>("baiwang.cs.investor.commercial_health_query", request, "");
+        }
+
+        /// <summary>
+        /// 减免事项查询
+        /// </summary>
+        public Task<BaiWangResponse<InvestorReduceQueryResponse>> InvestorReduceQueryAsync(InvestorReduceQueryRequest request)
+        {
+            return ExecuteAsync<InvestorReduceQueryRequest, InvestorReduceQueryResponse>("baiwang.cs.investor.reduce_query", request, "");
+        }
+
+        /// <summary>
+        /// 公益慈善捐赠编辑
+        /// </summary>
+        public Task<BaiWangResponse<InvestorCharityDonationEditResponse>> InvestorCharityDonationEditAsync(InvestorCharityDonationEditRequest request)
+        {
+            return ExecuteAsync<InvestorCharityDonationEditRequest, InvestorCharityDonationEditResponse>("baiwang.cs.investor.charity_donation_edit", request, "");
+        }
+
+        /// <summary>
+        /// 地区基金下载
+        /// </summary>
+        public Task<BaiWangResponse<InvestorRegionalFundDownloadResponse>> InvestorRegionalFundDownloadAsync(InvestorRegionalFundDownloadRequest request)
+        {
+            return ExecuteAsync<InvestorRegionalFundDownloadRequest, InvestorRegionalFundDownloadResponse>("baiwang.cs.investor.regional_fund_download", request, "");
+        }
+
+        /// <summary>
+        /// 企业信息查询
+        /// </summary>
+        public Task<BaiWangResponse<InvestorEnterpriseInfoQueryResponse>> InvestorEnterpriseInfoQueryAsync(InvestorEnterpriseInfoQueryRequest request)
+        {
+            return ExecuteAsync<InvestorEnterpriseInfoQueryRequest, InvestorEnterpriseInfoQueryResponse>("baiwang.cs.investor.enterprise_info_query", request, "");
+        }
+
+        /// <summary>
+        /// 减免事项编辑
+        /// </summary>
+        public Task<BaiWangResponse<InvestorReduceEditResponse>> InvestorReduceEditAsync(InvestorReduceEditRequest request)
+        {
+            return ExecuteAsync<InvestorReduceEditRequest, InvestorReduceEditResponse>("baiwang.cs.investor.reduce_edit", request, "");
+        }
+
+        /// <summary>
+        /// 公益慈善捐赠查询
+        /// </summary>
+        public Task<BaiWangResponse<InvestorCharityDonationQueryResponse>> InvestorCharityDonationQueryAsync(InvestorCharityDonationQueryRequest request)
+        {
+            return ExecuteAsync<InvestorCharityDonationQueryRequest, InvestorCharityDonationQueryResponse>("baiwang.cs.investor.charity_donation_query", request,"");
+        }
+
+        private async Task<BaiWangResponse<TResponse>> ExecuteAsync<TRequest, TResponse>(string method, TRequest request,string orgAuthCode)
+        {
+            if(string.IsNullOrWhiteSpace(orgAuthCode))
+            {
+                orgAuthCode = _option.OrgAuthCode;
+            }
+            var accessToken = await GetAccessTokenAsync(orgAuthCode);
             var bodyJson = BaiWangHelper.ToJson(request);
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 

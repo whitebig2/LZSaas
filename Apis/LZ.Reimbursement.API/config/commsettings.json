@@ -1,0 +1,27 @@
+{
+  "Database": {
+    "Main": "server=106.15.126.71,9886;uid=sa;pwd=cur123!@#;database=LZ_Saas;Encrypt=True;TrustServerCertificate=True;",
+    "Finance": "server=106.15.126.71,9886;uid=sa;pwd=cur123!@#;database=LZ_Finance;Encrypt=True;TrustServerCertificate=True;"
+  },
+  "Redis": {
+    "ConnectionString": "8.153.194.13:26739,password=YKfXcxTsZcWpsMHG,defaultDatabase=0"
+  },
+  "RabbitMQ": {
+    "VirtualHost": "lz-virtual",
+    "Username": "lz",
+    "Password": "123456",
+    "HostName": "172.19.120.120",
+    "Port": 9885,
+    "ClientName": "lz-lqm",
+    "ExchangeName": "lqm_exchange",
+    "QueueName": "lqm_queue"
+  },
+  // 测试环境
+  "FxqOption": {
+    "Key": "GoexwR3Toe",
+    "secret": "72e9ff5d6a49491690a4cd22eb9402b1",
+    "IdentityUrl": "https://identitytest.fangxinqian.cn",
+    "RestapiUrl": "https://restapitest.fangxinqian.cn"
+  }
+ 
+}

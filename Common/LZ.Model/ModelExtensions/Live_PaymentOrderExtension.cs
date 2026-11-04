@@ -56,10 +56,10 @@ namespace LZ.Model.ModelExtensions
         public void HandlePayment()
         {
             //this.Status = PaymentOrderTransStatusEnumType.支付成功;
-            this.TransTime = DateTime.Now;
+            //this.TransTime = DateTime.Now;
             this.UpdateTime = DateTime.Now;
-            this.PushTime = null;
-            this.PushCount = 0;
+            //this.PushTime = null;
+            //this.PushCount = 0;
             if (Records == null || Records.Count == 0)
             {
                 return;

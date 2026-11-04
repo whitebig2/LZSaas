@@ -38,6 +38,8 @@ using LZ.Model.ModelExtensions;
 using LZ.Model.ICBC.Plkh;
 using Newtonsoft.Json;
 using Senparc.Weixin.MP.AdvancedAPIs.Card;
+using LZ.Model.Enums.Bank;
+using LZ.Model.Bank.Wallet;
 
 namespace LZ.Users.API.Controllers
 {
@@ -74,11 +76,11 @@ namespace LZ.Users.API.Controllers
         private readonly IHttpService _httpService;
         private readonly IFxqService _fxqService;
         private readonly IUserService _userService;
+        private readonly IBankWalletService _bankWalletService;
 
 
 
-
-        public JobTaskController(ILogger<JobTaskController> logger, IEntryService entryService, IBusinessInsuranceOrderService orderService, IBusinessInsuranceRecordService recordService, IServiceScopeFactory scopeFactory, IBusinessInsurancePushService pushService = null, IInsuranceApiService insuranceApiService = null, IBusinessInsurancePushRecordService pushRecordService = null, IBusinessInsuranceRecordService businessInsuranceRecordService = null, IBusinessInsuranceConfigService configService = null, IEventPublisher publisher = null, IAliSendInfo aliSendInfo = null, IBusinessInsuranceInitialRecordService initialRecordService = null, IAliyunOSSService aliyunOSSService = null, IBusinessApiOrderDetailService businessApiOrderDetailService = null, IBusinessGuaranteeService businessGuaranteeService = null, IBusinessInsurancService businessInsurancService = null, IRedisService redisService = null, IBusInsuracneService busInsuracneService = null, IWebHostEnvironment env = null, IMailSenderService mailSenderService = null, IDeathInsuranceRecordService deathInsuranceRecordService = null, IBankOpenAccountService openAccountService = null, ISettingsService settingsService = null, IHttpClientFactory clientFactory = null, IHttpService httpService = null, IFxqService fxqService = null, IUserService userService = null)
+        public JobTaskController(ILogger<JobTaskController> logger, IEntryService entryService, IBusinessInsuranceOrderService orderService, IBankWalletService bankWalletService, IBusinessInsuranceRecordService recordService, IServiceScopeFactory scopeFactory, IBusinessInsurancePushService pushService = null, IInsuranceApiService insuranceApiService = null, IBusinessInsurancePushRecordService pushRecordService = null, IBusinessInsuranceRecordService businessInsuranceRecordService = null, IBusinessInsuranceConfigService configService = null, IEventPublisher publisher = null, IAliSendInfo aliSendInfo = null, IBusinessInsuranceInitialRecordService initialRecordService = null, IAliyunOSSService aliyunOSSService = null, IBusinessApiOrderDetailService businessApiOrderDetailService = null, IBusinessGuaranteeService businessGuaranteeService = null, IBusinessInsurancService businessInsurancService = null, IRedisService redisService = null, IBusInsuracneService busInsuracneService = null, IWebHostEnvironment env = null, IMailSenderService mailSenderService = null, IDeathInsuranceRecordService deathInsuranceRecordService = null, IBankOpenAccountService openAccountService = null, ISettingsService settingsService = null, IHttpClientFactory clientFactory = null, IHttpService httpService = null, IFxqService fxqService = null, IUserService userService = null)
         {
             _logger = logger;
             _entryService = entryService;
@@ -108,6 +110,7 @@ namespace LZ.Users.API.Controllers
             _httpService = httpService;
             _fxqService = fxqService;
             _userService = userService;
+            _bankWalletService = bankWalletService;
         }
 
 
@@ -2682,10 +2685,19 @@ namespace LZ.Users.API.Controllers
 
             Random random = new Random();
             var client = _clientFactory.CreateClient();
-            string fontPath = Path.Combine(_env.WebRootPath, "Fonts", "msyh.ttf");
+            string fontPath = "";
+            try
+            {
+                fontPath = Path.Combine(_env.WebRootPath, "Fonts", "msyh.ttf");
+            }
+            catch(Exception e)
+            {
+                return Ok(new { msg = e.ToString() });
+            } 
+
             var config = await _settingsService.GetMasterSettings();
             var ossDomain=config.AliBucketDomain;
-            var records = await _openAccountService.List(f => f.Status == OpenAccountStatusEnumType.待处理 &&string.IsNullOrWhiteSpace(f.FailMsg)&&f.Name== "李崇亨");
+            var records = await _openAccountService.List(f => f.Status == OpenAccountStatusEnumType.待处理 &&string.IsNullOrWhiteSpace(f.FailMsg)&&f.Name== "麻亚魏");
             if (records.Count > 0)
             {
                 foreach(var x in records)
@@ -2981,6 +2993,71 @@ namespace LZ.Users.API.Controllers
         }
 
 
+        #endregion
+
+        #region 工商e钱包批量查询是否已开卡
+        [HttpPost]
+        public async Task<IActionResult> BankWalletBatchQueryJob()
+        {
+            var list = await _bankWalletService.List(t => t.Status == (int)BankWalletEnumType.开通中);
+            List<Live_BankWallet> items = new List<Live_BankWallet>();
+            if (list.Count > 0)
+            {
+                foreach(var exist in list)
+                {
+                    //调用查询接口
+                    string json = JsonConvert.SerializeObject(exist);
+                    var res = await _httpService.PostAsync<BankWalletAcctQuery>(ServiceNames.BankService, "/api/BankWallet/query", json);
+                    if (res.Code == 200)
+                    {
+
+                        if (res.Data.Code == 0 && !string.IsNullOrEmpty(res.Data.OpenacctStatus))
+                        {
+                            switch (res.Data.OpenacctStatus)
+                            {
+                                case "00":
+                                    exist.Status = (int)BankWalletEnumType.开通中;
+                                    break;
+                                case "01":
+                                    exist.Status = (int)BankWalletEnumType.开通中;
+                                    break;
+                                case "02":
+                                    exist.Status = (int)BankWalletEnumType.开通成功;
+                                    break;
+                                case "03":
+                                    exist.Status = (int)BankWalletEnumType.开通失败;
+                                    break;
+                            }
+                            //exist.Status = Convert.ToInt32(res.Data.OpenacctStatus);
+                            exist.MediumId = res.Data.MediumId;
+                            if (!string.IsNullOrEmpty(res.Data.OpenAcctErrorCode))
+                            {
+                                exist.OpenAcctErrorCode = res.Data.OpenAcctErrorCode;
+                            }
+                            if (!string.IsNullOrEmpty(res.Data.OpenAcctErrorMsg))
+                            {
+                                exist.OpenAcctErrorMsg = res.Data.OpenAcctErrorMsg;
+                            }
+
+                        }
+                        else
+                        {
+                            exist.Code = res.Data.Code.ToString();
+                            exist.Msg = res.Data.Msg;
+                            exist.FailMsg = JsonConvert.SerializeObject(res.Data);
+                        }
+                        items.Add(exist);
+                    }
+                    else
+                    {
+                        exist.Msg = "e钱包查询账户出错";
+                        items.Add(exist);
+                    }
+                }
+            }
+            await _bankWalletService.Update(items);
+            return Ok(new { items});
+        }
         #endregion
 
     }

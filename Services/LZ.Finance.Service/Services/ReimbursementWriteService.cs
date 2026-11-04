@@ -8,7 +8,9 @@ using LZ.Model.Dtos.Reimbursement;
 using LZ.Model.Enums;
 using LZ.Model.Enums.Reimbusement;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml.Export.ToDataTable;
 using SqlSugar;
 using SqlSugar.IOC;
 
@@ -21,6 +23,7 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
     private readonly IReimbursementReadService _read;
     private readonly IServiceProvider _services;
     private readonly ILogger<ReimbursementWriteService> _logger;
+    private readonly IConfiguration _configuration;
 
     /// <summary>接入当前用户、共用审批服务、申请查询和可选外部能力。</summary>
     /// <param name="user">当前登录用户。</param>
@@ -30,21 +33,23 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
     /// <param name="logger">预算补偿失败日志。</param>
     public ReimbursementWriteService(ICurrentUser user, IApprovalService approval,
         IReimbursementReadService read, IServiceProvider services,
-        ILogger<ReimbursementWriteService> logger)
+        ILogger<ReimbursementWriteService> logger, IConfiguration configuration)
     {
         _user = user;
         _approval = approval;
         _read = read;
         _services = services;
         _logger = logger;
+        _configuration = configuration;
     }
 
     private int CompanyId
     {
         get
         {
-            if (!_user.IsAuthenticated || _user.CompanyID <= 0 || _user.UserID <= 0 ||
-                _user.PlatformType != PlatformType.XFZMini)
+            if (!_user.IsAuthenticated || _user.CompanyID <= 0 || _user.UserID <= 0
+                //||_user.PlatformType != PlatformType.LZMini
+                )
                 throw new UnauthorizedAccessException("仅当前企业的小程序用户可提交报销申请");
             return _user.CompanyID;
         }
@@ -66,10 +71,10 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
             throw new InvalidOperationException("当前用户未绑定部门，无法判定报销流程");
         var department = await Main.Queryable<Live_Partner>()
             .FirstAsync(x => x.CompanyID == companyId && x.PartnerGID == deptGuid);
-        if (department is null) throw new InvalidOperationException("当前部门未配置报销流程");
+        if (department is null || !department.Enabled) throw new InvalidOperationException("当前部门未配置报销流程");
         return new FlowVersionDto
         {
-            FlowType = department.Enabled ? ReimbursementFlowType.Budget : ReimbursementFlowType.Audit,
+            FlowType = department.IsBudget ? ReimbursementFlowType.Budget : ReimbursementFlowType.Audit,
             Source = "DepartmentBudgetSwitch"
         };
     }
@@ -152,20 +157,22 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
         var actor = await Main.Queryable<Live_Personnel>()
             .FirstAsync(x => x.CompanyID == companyId && x.UserID == _user.UserID && x.Enabled);
         if (actor is null) throw new UnauthorizedAccessException("当前企业用户不存在或已停用");
-        var dept = actor.DeptGID is Guid deptGuid
+        var dept = actor.PartnerGID is Guid deptGuid
             ? await Main.Queryable<Live_Partner>().FirstAsync(x => x.CompanyID == companyId && x.PartnerGID == deptGuid)
             : null;
 
         BudgetDecision? budget = null;
         var budgetProvider = _services.GetService<IReimbursementBudgetProvider>();
-        if (flow.FlowType == ReimbursementFlowType.Budget)
+        if (flow.FlowType == ReimbursementFlowType.Budget
+            //&& _configuration.GetValue("Reimbursement:Budget:EnableFirstSubmit", true)
+            )
         {
             if (budgetProvider is null) throw new InvalidOperationException("预算校验暂不可用，请稍后重试");
             try
             {
                 budget = await budgetProvider.CheckAndReserveAsync(companyId, _user.UserID, applyNo,
                     request.CostTypeId, request.ApplyAmount, cancellationToken);
-                if (budget.WithinBudget && !budget.Reserved)
+                if (budget.WithinBudget && !budget.Reserved && !budget.DirectlyPass)
                     throw new InvalidOperationException("预算预留未完成");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -209,8 +216,8 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
             CreatedBy = _user.UserID,
             CreatedAt = now
         };
-        var reservationMade = budget?.Reserved == true;
-        Context.Ado.BeginTran();
+        var reservationMade = budget?.Reserved == true && budget.ReservationChanged;
+        await Context.Ado.BeginTranAsync();
         try
         {
             await Context.Insertable(apply).IgnoreColumns(x => new { x.Id, x.RowVersion }).ExecuteCommandAsync();
@@ -239,35 +246,20 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
                     ExceptionStatus = (byte)PaymentExceptionStatus.PendingInvoice,
                     CreatedAt = now
                 }).IgnoreColumns(x => new { x.Id, x.RowVersion }).ExecuteCommandAsync();
-            if (budget is not null)
-                await Context.Insertable(new FIN_Reimb_BudgetReservation
-                {
-                    ReservationGuid = Guid.NewGuid(),
-                    CompanyId = companyId,
-                    ApplyGuid = applyGuid,
-                    CostTypeName = apply.CostTypeName,
-                    ExternalBudgetId = budget.ExternalBudgetId,
-                    ExternalRequestNo = applyNo,
-                    CheckResult = budget.WithinBudget ? (byte)1 : (byte)2,
-                    ReservationStatus = budget.Reserved ? (byte)1 : (byte)0,
-                    AvailableBefore = budget.AvailableBefore,
-                    ReservedAmount = budget.Reserved ? apply.ApplyAmount : 0,
-                    ResponseSnapshot = budget.ResponseSnapshot,
-                    CreatedAt = now
-                }).IgnoreColumns(x => new { x.Id, x.RowVersion }).ExecuteCommandAsync();
+            if (budget is not null) await UpsertBudgetReservationAsync(apply, budget, now);
             if (apply.ApplyStatus == (byte)ReimbursementApplyStatus.PendingReview)
                 await _approval.StartAsync(applyGuid, cancellationToken);
-            Context.Ado.CommitTran();
+            await Context.Ado.CommitTranAsync();
             return MapResult(apply);
         }
         catch
         {
-            Context.Ado.RollbackTran();
-            if (reservationMade && budgetProvider is not null)
-                await ReleaseBudgetAsync(budgetProvider, applyNo);
+            await Context.Ado.RollbackTranAsync();
             // 并发同键请求可能同时通过提交前检查；主键竞争失败后返回先提交的申请。
             var concurrent = await FindOwnedAsync(applyGuid, companyId);
             if (concurrent is not null) return MapResult(concurrent);
+            if (reservationMade && budgetProvider is not null)
+                await ReleaseBudgetAsync(budgetProvider, applyNo);
             throw;
         }
     }
@@ -326,7 +318,7 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
                 // 退回后金额或成本类型可能变化，重提前重新校验并预留预算。
                 budget = await budgetProvider.CheckAndReserveAsync(companyId, _user.UserID,
                     apply.ApplyNo, request.CostTypeId, request.ApplyAmount, cancellationToken);
-                if (budget.WithinBudget && !budget.Reserved)
+                if (budget.WithinBudget && !budget.Reserved && !budget.DirectlyPass)
                     throw new InvalidOperationException("预算预留未完成");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -337,8 +329,8 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
         var budgetPassed = budget?.WithinBudget == true;
         var nextApplyStatus = budgetPassed
             ? (byte)ReimbursementApplyStatus.PendingPayment
-            : (byte)ReimbursementApplyStatus.ReviewReturned;
-        Context.Ado.BeginTran();
+            : (byte)ReimbursementApplyStatus.PendingReview;
+        await Context.Ado.BeginTranAsync();
         try
         {
             var changed = await Context.Updateable<FIN_Reimb_Apply>()
@@ -399,35 +391,25 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
                         .ExecuteCommandAsync();
                 }
             }
-            if (budget is not null)
-                await Context.Insertable(new FIN_Reimb_BudgetReservation
-                {
-                    ReservationGuid = Guid.NewGuid(),
-                    CompanyId = companyId,
-                    ApplyGuid = applyGuid,
-                    CostTypeName = request.CostTypeName.Trim(),
-                    ExternalBudgetId = budget.ExternalBudgetId,
-                    ExternalRequestNo = apply.ApplyNo,
-                    CheckResult = budget.WithinBudget ? (byte)1 : (byte)2,
-                    ReservationStatus = budget.Reserved ? (byte)1 : (byte)0,
-                    AvailableBefore = budget.AvailableBefore,
-                    ReservedAmount = budget.Reserved ? request.ApplyAmount : 0,
-                    ResponseSnapshot = budget.ResponseSnapshot,
-                    CreatedAt = now
-                }).IgnoreColumns(x => new { x.Id, x.RowVersion }).ExecuteCommandAsync();
+            if (budget is not null) await UpsertBudgetReservationAsync(new FIN_Reimb_Apply
+            {
+                ApplyGuid = applyGuid,
+                CompanyId = companyId,
+                CostTypeName = request.CostTypeName.Trim(),
+                ApplyNo = apply.ApplyNo,
+                ApplyAmount = request.ApplyAmount
+            }, budget, now);
             if (budget?.WithinBudget != true)
                 await _approval.StartAsync(applyGuid, cancellationToken);
-            Context.Ado.CommitTran();
-            apply.ApplyStatus = budget?.WithinBudget == true
-                ? (byte)ReimbursementApplyStatus.PendingPayment
-                : (byte)ReimbursementApplyStatus.PendingReview;
+            await Context.Ado.CommitTranAsync();
+            apply.ApplyStatus = nextApplyStatus;
             apply.InvoiceSupplementStatus = nextSupplementStatus;
             return MapResult(apply);
         }
         catch
         {
-            Context.Ado.RollbackTran();
-            if (budget?.Reserved == true && budgetProvider is not null)
+            await Context.Ado.RollbackTranAsync();
+            if (budget?.Reserved == true && budget.ReservationChanged && budgetProvider is not null)
                 await ReleaseBudgetAsync(budgetProvider, apply.ApplyNo);
             throw;
         }
@@ -440,18 +422,19 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
     public async Task<ApplySubmitResultDto> CopyAsync(ApplicationCopyRequest request,
         CancellationToken cancellationToken = default)
     {
+        ApplySubmitResultDto resultDto = null;
         var companyId = CompanyId;
         ValidateFields(request);
         var source = await FindOwnedAsync(request.SourceApplyGuid, companyId);
         if (source is null) throw new ArgumentException("原申请不存在");
         if (source.ApplyStatus == (byte)ReimbursementApplyStatus.ReviewReturned)
-            return await ResubmitAsync(source.ApplyGuid, ToResubmit(request), cancellationToken);
+            resultDto = await ResubmitAsync(source.ApplyGuid, ToResubmit(request), cancellationToken);
         if (source.ApplyStatus != (byte)ReimbursementApplyStatus.Paid)
             throw new InvalidOperationException("当前申请状态不允许再次申请");
         if (source.ApplyAmount != request.ApplyAmount)
             throw new ArgumentException("沿用原发票时申请金额不得修改");
         // 用户确认已打款申请可以沿用原票新建；普通首次提交仍执行发票占用检查。
-        return await SubmitCoreAsync(new ApplicationCreateRequest
+        resultDto = await SubmitCoreAsync(new ApplicationCreateRequest
         {
             ApplyType = (ReimbursementApplyType)source.ApplyType,
             LegalEntityId = request.LegalEntityId,
@@ -467,6 +450,7 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
             ApplyAmount = request.ApplyAmount,
             IdempotencyKey = request.IdempotencyKey
         }, source, cancellationToken);
+        return resultDto;
     }
 
     /// <summary>向待补票付款单关联已验真的补传发票并更新票额与异常状态。</summary>
@@ -674,18 +658,13 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
         List<Guid> validIds, byte purpose, DateTime now)
     {
         var valid = validIds.ToHashSet();
-        // 同租户同号码串行入池；第 4 章 DDL 未创建唯一索引，需要在 Finance 连接上加事务级锁。
+        // 同租户同号码串行入池；第 4 章 DDL 未创建唯一索引，需要在 Finance 连接上加事务级表锁。
         foreach (var upload in uploads.Where(x => valid.Contains(x.UploadGuid))
                      .OrderBy(x => x.InvoiceNumber, StringComparer.Ordinal))
         {
-            var resource = "reimb-invoice:" + Convert.ToHexString(SHA256.HashData(
-                Encoding.UTF8.GetBytes($"{apply.CompanyId}:{upload.InvoiceNumber}")));
-            await Context.Ado.ExecuteCommandAsync(
-                "DECLARE @result int; EXEC @result = sp_getapplock @Resource = @resource, " +
-                "@LockMode = 'Exclusive', @LockOwner = 'Transaction'; " +
-                "IF @result < 0 THROW 51000, 'Invoice lock failed', 1;",
-                new SugarParameter("@resource", resource));
+            var TabHoldLock = "WITH(TABLOCKX,HOLDLOCK)";
             var existing = await Context.Queryable<FIN_Reimb_InvoicePool>()
+                .With(TabHoldLock)
                 .FirstAsync(x => x.CompanyId == apply.CompanyId && x.InvoiceNumber == upload.InvoiceNumber);
             if (existing is not null && existing.SourceUploadGuid != upload.UploadGuid)
                 throw new InvalidOperationException("再次上传即可");
@@ -724,7 +703,7 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
     /// <param name="request">待校验申请字段。</param>
     private static void ValidateFields(ApplicationFieldsRequest request)
     {
-        if (request is null || request.LegalEntityId <= 0 || request.CostTypeId <= 0 ||
+        if (request is null || request.LegalEntityId == Guid.Empty || request.CostTypeId <= 0 ||
             string.IsNullOrWhiteSpace(request.LegalEntityName) || request.LegalEntityName.Length > 200 ||
             string.IsNullOrWhiteSpace(request.CostTypeName) || request.CostTypeName.Length > 100 ||
             string.IsNullOrWhiteSpace(request.ExpenseName) || request.ExpenseName.Length > 200 ||
@@ -749,7 +728,9 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
     /// <returns>随机 nonce、认证 tag 与密文拼接后的字节。</returns>
     private static byte[] EncryptCard(string card)
     {
-        var keyText = Environment.GetEnvironmentVariable("LZ_REIMBURSEMENT_CARD_KEY");
+        //TODO : 生产环境请使用安全的 32 字节 Base64 密钥，避免明文出现在代码中。 先临时定义保证业务完整性,后续可配置文件中
+        var keyText = "X1v9K2pL5yR3cT6hJ0sA4dF8gH2kM9Xf2bV7mQ4wN8I=";
+        //var keyText = Environment.GetEnvironmentVariable("LZ_REIMBURSEMENT_CARD_KEY");
         if (string.IsNullOrWhiteSpace(keyText))
             throw new InvalidOperationException("银行卡加密密钥未配置");
         byte[] key;
@@ -782,6 +763,32 @@ public sealed class ReimbursementWriteService : ServicesBase<FIN_Reimb_Apply>, I
             // 保留原始数据库错误，并单独告警补偿失败，供运维按外部请求号核对。
             _logger.LogCritical(ex, "报销预算预留释放失败，外部请求号 {ExternalRequestNo}", externalRequestNo);
         }
+    }
+
+    private async Task UpsertBudgetReservationAsync(FIN_Reimb_Apply apply, BudgetDecision budget, DateTime now)
+    {
+        var reservation = await Context.Queryable<FIN_Reimb_BudgetReservation>()
+            .FirstAsync(x => x.CompanyId == apply.CompanyId && x.ExternalRequestNo == apply.ApplyNo);
+        if (reservation is null || (reservation.ApplyGuid != Guid.Empty && reservation.ApplyGuid != apply.ApplyGuid))
+            throw new InvalidOperationException("预算预留流水不存在或关联其他申请");
+        var changed = await Context.Updateable<FIN_Reimb_BudgetReservation>()
+            .SetColumns(x => new FIN_Reimb_BudgetReservation
+            {
+                ApplyGuid = apply.ApplyGuid,
+                CostTypeName = apply.CostTypeName,
+                ExternalBudgetId = budget.ExternalBudgetId,
+                CheckResult = budget.WithinBudget ? (byte)1 : (byte)2,
+                ReservationStatus = budget.Reserved ? (byte)BudgetReservationStatus.Reserved :
+                    (byte)BudgetReservationStatus.None,
+                AvailableBefore = budget.AvailableBefore,
+                ReservedAmount = budget.Reserved ? apply.ApplyAmount : 0,
+                ResponseSnapshot = budget.ResponseSnapshot,
+                UpdatedAt = now
+            })
+            .Where(x => x.ReservationGuid == reservation.ReservationGuid && x.CompanyId == apply.CompanyId &&
+                (x.ApplyGuid == Guid.Empty || x.ApplyGuid == apply.ApplyGuid))
+            .ExecuteCommandAsync();
+        if (changed != 1) throw new InvalidOperationException("预算预留流水已变化，请重试");
     }
 
     /// <summary>由企业、用户、操作和幂等键生成稳定的申请 GUID。</summary>

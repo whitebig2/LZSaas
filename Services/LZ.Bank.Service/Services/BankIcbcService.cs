@@ -52,14 +52,18 @@ namespace LZ.Bank.Service.Services
 
                 if (resp.IsSuccessStatusCode)
                 {
-                   return await resp.Content.ReadFromJsonAsync<PlkhResult>();
+                    PlkhResult model = new PlkhResult();
+                    model = await resp.Content.ReadFromJsonAsync<PlkhResult>();
+                    model.Content = json;
+                    return model;
                 }
                 else {
                     return new PlkhResult()
                     {
                         Id = gid,
                         Retcode = "9999",
-                        Retmsg = $"请求码获取异常，请求码：{resp.StatusCode}"
+                        Retmsg = $"请求码获取异常，请求码：{resp.StatusCode}",
+                        Content = await resp.Content.ReadAsStringAsync()
                     };
                 }
             }
@@ -101,7 +105,10 @@ namespace LZ.Bank.Service.Services
 
                 if (resp.IsSuccessStatusCode)
                 {
-                    return await resp.Content.ReadFromJsonAsync<PlkhResult>();
+                    PlkhResult model = new PlkhResult();
+                    model = await resp.Content.ReadFromJsonAsync<PlkhResult>();
+                    model.Content = json;
+                    return model;
                 }
                 else
                 {
@@ -109,6 +116,7 @@ namespace LZ.Bank.Service.Services
                     {
                         Id = gid,
                         Retcode = "9999",
+                        Content = await resp.Content.ReadAsStringAsync(),
                         Retmsg = $"请求码获取异常，请求码：{resp.StatusCode}"
                     };
                 }
@@ -152,7 +160,10 @@ namespace LZ.Bank.Service.Services
 
                 if (resp.IsSuccessStatusCode)
                 {
-                    return await resp.Content.ReadFromJsonAsync<PlkhResult>();
+                    PlkhResult model = new PlkhResult();
+                    model = await resp.Content.ReadFromJsonAsync<PlkhResult>();
+                    model.Content = JsonConvert.SerializeObject(apply);
+                    return model;
                 }
                 else
                 {
@@ -160,6 +171,7 @@ namespace LZ.Bank.Service.Services
                     {
                         Id = gid,
                         Retcode = "9999",
+                        Content = JsonConvert.SerializeObject(apply),
                         Retmsg = $"请求码获取异常，请求码：{resp.StatusCode}"
                     };
                 }

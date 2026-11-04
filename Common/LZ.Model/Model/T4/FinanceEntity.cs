@@ -636,7 +636,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  int? PartnerID { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -1110,7 +1110,7 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  bool IsTaxPrice { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -1288,7 +1288,7 @@ namespace LZ.Model
 	/// </summary>
 	[Serializable]
 	[TenantAttribute("Finance")]
-	public partial class FIN_Reimb__BudgetApplyRecord
+	public partial class FIN_PartnerAuthCode
     {
 		
 		/// <summary>
@@ -1301,379 +1301,55 @@ namespace LZ.Model
 		/// 
 		/// </summary>		
 		
-		public  int? CompanyID { get; set; }
+		public  string TaxNo { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
-		public  Guid? CompanyGID { get; set; }
+		public  string OrgAuthCode { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
-		public  int? Year { get; set; }
+		public  DateTime? OpeTime { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
-		public  string ExpensesTitle { get; set; }
+		public  int? OpeType { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
-		public  int? CostType { get; set; }
+		public  string AppKey { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
-		public  int? ReceivePaymentCompanyID { get; set; }
+		public  string CustomerName { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
-		public  int? PartnerID { get; set; }
+		public  string Creater { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
-		public  Guid? PartnerGID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  Guid? UserGID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string UserName { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string SysDepartmentName { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal TotalAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal ApplyAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal AvailableAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? BudgetManageID { get; set; }
+		public  int? Status { get; set; }
 		
 		/// <summary>
 		/// 
 		/// </summary>		
 		
 		public  DateTime? CreateTime { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string ReceivePaymentCompanyName { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string PartnerName { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Remark { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Description { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Bank { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string BankNo { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string PayType { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  Guid? PayerID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Payer { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? ProcessStatus { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Message { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? RollBackBudgetManageRecordID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  DateTime? PayTime { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? RechargeLogID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  Guid? SalaryGID { get; set; }
-		   
-    }
-
-
-
-	/// <summary>
-	///  - 实体层
-	/// </summary>
-	[Serializable]
-	[TenantAttribute("Finance")]
-	public partial class FIN_Reimb__BudgetApplyRecordDetail
-    {
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
-		public  int ID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? BudgetApplyRecordID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal Money { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  Guid? PartnerGID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string PartnerName { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Remark { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  DateTime? CreateTime { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? CompanyID { get; set; }
-		   
-    }
-
-
-
-	/// <summary>
-	///  - 实体层
-	/// </summary>
-	[Serializable]
-	[TenantAttribute("Finance")]
-	public partial class FIN_Reimb__BudgetManage
-    {
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
-		public  int ID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? CompanyID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  Guid? CompanyGID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? Year { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? PartnerID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  Guid? PartnerGID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? CostType { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? GenerateType { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string ExpensesTitle { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal Percentage { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal TotalAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal LockAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal UsedAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal AvailableAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal MonthTargetAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal HeadOfficeUsedAmount { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  DateTime? CreateTime { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  bool DirectlyPass { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  bool Hidden { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  bool PublicUse { get; set; }
 		   
     }
 
@@ -1757,7 +1433,7 @@ namespace LZ.Model
 		/// 
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
-		public  int LegalEntityId { get; set; }
+		public  Guid LegalEntityId { get; set; }
 		
 		/// <summary>
 		/// 
@@ -2172,7 +1848,7 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  bool IsEnabled { get; set; }
-		   
+		
 		/// <summary>
 		/// 
 		/// </summary>		
@@ -2368,6 +2044,330 @@ namespace LZ.Model
 	/// </summary>
 	[Serializable]
 	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetMonthReport
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? BudgetReportId { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string MainTitle { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Title { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int DataType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int QuarterType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal BusinessIncome { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetApplyRecord
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? CompanyGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Year { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ExpensesTitle { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CostType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? ReceivePaymentCompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? PartnerID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? PartnerGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? UserGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string UserName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string SysDepartmentName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal TotalAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal ApplyAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal AvailableAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? BudgetManageID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ReceivePaymentCompanyName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PartnerName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Remark { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Description { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Bank { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string BankNo { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PayType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? PayerID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Payer { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? ProcessStatus { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Message { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? RollBackBudgetManageRecordID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? PayTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? RechargeLogID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? SalaryGID { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetApplyRecordDetail
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? BudgetApplyRecordID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal Money { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? PartnerGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PartnerName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Remark { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CompanyID { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	/// 财务科目 - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
 	public partial class FIN_Reimb_BudgetConfig
     {
 		
@@ -2466,6 +2466,546 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string PartnerNames { get; set; }
+		
+		/// <summary>
+		/// 财务科目
+		/// </summary>		
+		
+		public  string FinanceSubject { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetManage
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsPrimaryKey=true,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? CompanyGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Year { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? PartnerID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? PartnerGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CostType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? GenerateType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string ExpensesTitle { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal Percentage { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal TotalAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal LockAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal UsedAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal AvailableAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal MonthTargetAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal HeadOfficeUsedAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  bool DirectlyPass { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  bool Hidden { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  bool PublicUse { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PartnerName { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetRechargeLog
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? CompanyGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Year { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? UserGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string UserName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Content { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal Money { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PartnerName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string CostName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Title { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string GenerateName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Type { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string OtherGenerateName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string OtherCostName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string OtherPartnerName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string OtherTitle { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal TotalAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal LockAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal UsedAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal AvailableAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal HeadOfficeUsedAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal AddAmount { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal DecreaseAmount { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetReport
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? CompanyGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? PartnerID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? PartnerGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string PartnerName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Year { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetReportConfig
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? CompanyGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Title { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? ItemType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CostType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string CostName { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetReportDetail
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? CompanyID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? CompanyGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? BudgetReportID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? PartnerID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  Guid? PartnerGID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? BudgetReportConfigID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Title { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal Money { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Year { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? Month { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? QuarterType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string QuarterName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? MonthType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string MonthName { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
 		   
     }
 

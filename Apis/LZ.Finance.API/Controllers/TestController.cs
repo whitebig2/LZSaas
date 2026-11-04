@@ -49,7 +49,7 @@ namespace LZ.Finance.API.Controllers
         private ISalaryRecordService _salaryRecordService    ;
         private IBaiWangService _baiWangService;
 
-        public TestController(IFxqService fxqService, IRedisService redisService, IAliyunOSSService aliyunOSSService, IFinanceOtherService financeOtherService, IEventPublisher publisher, ISalaryCustomerService salaryCustomerService, IFinanceOtherService otherService, ICurrentUser currentUser, IAuthService authService, IHttpService httpService, ISalaryRecordService salaryRecordService)
+        public TestController(IFxqService fxqService, IRedisService redisService, IAliyunOSSService aliyunOSSService, IFinanceOtherService financeOtherService, IEventPublisher publisher, ISalaryCustomerService salaryCustomerService, IFinanceOtherService otherService, ICurrentUser currentUser, IAuthService authService, IHttpService httpService, ISalaryRecordService salaryRecordService, IBaiWangService baiWangService)
         {
             _fxqService = fxqService;
             _redisService = redisService;
@@ -69,16 +69,16 @@ namespace LZ.Finance.API.Controllers
 
 
 
-        [HttpPost]
-        public async Task<IActionResult> BaiwangTest()
-        {
+        //[HttpPost]
+        //public async Task<IActionResult> BaiwangTest()
+        //{
 
        
 
-          //await  _baiWangService.TaxEnterpriseInfoQuery("", "");
+          //await  _baiWangService.InvestorEnterpriseInfoQueryAsync(request);
 
-            return Ok();
-        }
+        //    return Ok();
+        //}
 
 
         [HttpPost]

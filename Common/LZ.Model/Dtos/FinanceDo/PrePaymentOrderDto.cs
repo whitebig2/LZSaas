@@ -48,6 +48,7 @@ namespace LZ.Model.Dtos.FinanceDo
         public string CardID { get; set; }
         public string BankName { get; set; }
         public string BankNo { get; set; }
+        public string BankBranceCode { get; set; }
         public decimal TransAmount { get; set; }
     }
 }

@@ -36,27 +36,27 @@ namespace LZ.Basic.API.Controllers
             var items = new List<Model.AI_Knowledge>();
             if (!string.IsNullOrEmpty(query.Keyword))
             {
-                foreach (var model in models)
-                {
-                    if (!string.IsNullOrEmpty(model.Indexs))
-                    {
-                        var indexs = model.Indexs.Split(',');
-                        foreach (var index in indexs)
-                        {
-                            if (query.Keyword.IndexOf(index) > -1)
-                            {
-                                items.Add(model);
-                            }
-                        }
-                    }
-                }
+                //foreach (var model in models)
+                //{
+                //    if (!string.IsNullOrEmpty(model.Indexs))
+                //    {
+                //        var indexs = model.Indexs.Split(',');
+                //        foreach (var index in indexs)
+                //        {
+                //            if (query.Keyword.IndexOf(index) > -1)
+                //            {
+                //                items.Add(model);
+                //            }
+                //        }
+                //    }
+                //}
             }
             else
             {
                 items = models;
             }
 
-                var res = new RequestResultModel();
+            var res = new RequestResultModel();
             res.Code = 200;
             res.Message = "查询成功！";
             res.Items= items;
@@ -68,7 +68,7 @@ namespace LZ.Basic.API.Controllers
             var user = CurrentUser;
             model.CreateTime = DateTime.Now;
             model.CompanyID = user.CompanyID;
-            model.CompanyGID = user.CompanyGID;
+            model.CompanyGID = user.CompanyGID.Value;
             await knowledgeService.Add(model);
             return Ok();
         }

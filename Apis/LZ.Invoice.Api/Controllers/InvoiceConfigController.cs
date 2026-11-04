@@ -18,8 +18,9 @@ namespace LZ.Invoice.Api.Controllers
     public class InvoiceConfigController : InvoiceControllerBase
     {
         private readonly IInvoiceConfigService _invoiceConfigService;
-
-        public InvoiceConfigController(IInvoiceConfigService invoiceConfigService)
+        private readonly IAuthService _authService;
+        private readonly IHttpService _httpService;
+        public InvoiceConfigController(IInvoiceConfigService invoiceConfigService,IAuthService authService,IHttpService httpService)
         {
             _invoiceConfigService = invoiceConfigService;
             _authService = authService;
@@ -51,17 +52,46 @@ namespace LZ.Invoice.Api.Controllers
             exp.AndIF(!string.IsNullOrWhiteSpace(issuer), f => f.IssuerName.Contains(issuer));
             exp.AndIF(!string.IsNullOrWhiteSpace(recipient), f => f.RecipientName.Contains(recipient));
             var models = await _invoiceConfigService.List(exp.ToExpression(), query);
-            return Ok(new { items = models, count = query.Count });
+
+
+            var paras = new Dictionary<string, string>();
+            paras.Add("Page", "0");
+            paras.Add("CompanyID", user.CompanyID.ToString());
+            var obj = await _httpService.GetAsync(ServiceNames.BasicService, "/api/Partner/list", paras);
+            List<Model.Live_Partner> partners = new List<Live_Partner>();
+            JObject? aa11;
+            if (!string.IsNullOrEmpty(obj.Data.ToString()))
+            {
+                var ii = JsonConvert.DeserializeObject(obj.Data.ToString()) as JObject;
+                partners = JsonConvert.DeserializeObject<List<Model.Live_Partner>>(ii["items"].ToString());
+                aa11 = ii;
+            }
+            if (partners == null)
+            {
+                throw new ErrorCodeException(-1, "未找到服务商列表");
+            }
+            foreach(var x in models)
+            {
+                var item = partners.Find(t => t.PartnerID == x.PartnerID);
+                if(item != null)
+                {
+                    x.PartnerName = item.PartnerName;
+                }
+            }
+
+
+
+            return Ok(new { items = models, count = query.Count,partners });
         }
 
         [HttpPost]
         public async Task<IActionResult> Add(FIN_InvoiceConfig model)
         {
-            if (await _invoiceConfigService.Exist(t=>t.IssuerUnitID==model.IssuerUnitID && t.RecipientUnitID == model.RecipientUnitID))
-            {
-                throw new ErrorCodeException(-1, "开票方和收票方相同的配置已存在");
-            }
             var user = CurrentUser;
+            if (await _invoiceConfigService.Exist(t=>t.IssuerUnitID==model.IssuerUnitID && t.RecipientUnitID == model.RecipientUnitID && t.DetailID ==model.DetailID && t.CompanyID == user.CompanyID))
+            {
+                throw new ErrorCodeException(-1, "该客户单位的已有相同的开票配置");
+            }
             model.CompanyID = user.CompanyID;
             model.CompanyGID = user.CompanyGID;
             model.CreateTime = DateTime.Now;

@@ -25,5 +25,10 @@ namespace LZ.Model.ICBC.Plkh
         /// 返回信息
         /// </summary>
         public string Retmsg { get; set; }
+
+        /// <summary>
+        /// 参数信息
+        /// </summary>
+        public string Content { get; set; }
     }
 }

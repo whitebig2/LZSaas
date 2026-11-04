@@ -31,7 +31,7 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
         get
         {
             if (!_user.IsAuthenticated || _user.CompanyID <= 0 || _user.UserID <= 0 ||
-                _user.PlatformType is not (PlatformType.MiniAdmin or PlatformType.XFZMini))
+                _user.PlatformType is not (PlatformType.MiniAdmin or PlatformType.LZMini))
                 throw new UnauthorizedAccessException("当前用户不能访问报销审批功能");
             return _user.CompanyID;
         }
@@ -42,13 +42,13 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
     /// <summary>将小程序或分后台身份映射为审批账号及其部门，用于审批数据查询。</summary>
     /// <param name="companyId">当前企业 ID。</param>
     /// <returns>企业审批账号和可选部门。</returns>
-    private async Task<(SYS_CompanyUser User, Live_Partner? Department)> GetViewerAsync(int companyId)
+    private async Task<(Live_Personnel User, Live_Partner? Department)> GetViewerAsync(int companyId)
     {
-        SYS_CompanyUser? actor;
-        if (_user.PlatformType == PlatformType.XFZMini)
+        Live_Personnel? actor;
+        if (_user.PlatformType == PlatformType.LZMini)
         {
             // 小程序令牌 ID 属于 Live_User，审批节点 ID 属于 SYS_CompanyUser。
-            var miniUser = await Main.Queryable<Live_User>()
+            var miniUser = await Main.Queryable<Live_Personnel>()
                 .FirstAsync(x => x.UserID == _user.UserID && x.CompanyID == companyId && x.Enabled);
             if (miniUser is null || string.IsNullOrWhiteSpace(miniUser.Phone))
                 throw new UnauthorizedAccessException("当前小程序用户没有有效的审批身份");
@@ -57,22 +57,29 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
                 .ToListAsync();
             if (personnel.Count != 1 || personnel[0].PartnerGID is not Guid partnerGuid)
                 throw new UnauthorizedAccessException("当前小程序用户没有唯一的审批人员关系");
-            var matches = await Main.Queryable<SYS_CompanyUser>()
+            var matches = await Main.Queryable<Live_Personnel>()
                 .Where(x => x.CompanyID == companyId && x.Enabled &&
-                            x.PersonnelID == personnel[0].UserID && x.PartnerGID == partnerGuid)
+                            x.UserID == personnel[0].UserID && x.PartnerGID == partnerGuid)
                 .ToListAsync();
-            if (matches.Count != 1 || matches[0].PersonnelGID != personnel[0].UserGID)
+            if (matches.Count != 1 || matches[0].UserGID != personnel[0].UserGID)
                 throw new UnauthorizedAccessException("当前小程序用户没有有效的审批账号映射");
             actor = matches[0];
         }
         else
         {
-            actor = await Main.Queryable<SYS_CompanyUser>()
+            actor = await Main.Queryable<Live_Personnel>()
                 .FirstAsync(x => x.UserID == _user.UserID && x.CompanyID == companyId && x.Enabled);
         }
         if (actor is null)
             throw new UnauthorizedAccessException("当前企业用户不存在或已停用");
-        var departmentGuid = _user.PlatformType == PlatformType.XFZMini ? actor.PartnerGID : actor.DeptGID;
+        //Guid? departmentGuid = actor switch
+        //{
+        //    Live_Personnel p => _user.PlatformType == PlatformType.LZMini ? p.PartnerGID : p.DeptGID,
+        //    SYS_CompanyUser u => _user.PlatformType == PlatformType.MiniAdmin ? u.PartnerGID : u.DeptGID,
+        //    _ => null
+        //};
+
+        var departmentGuid = _user.PlatformType == PlatformType.LZMini ? actor.PartnerGID : actor.DeptGID;
         var department = departmentGuid is Guid deptGuid
             ? await Main.Queryable<Live_Partner>()
                 .FirstAsync(x => x.PartnerGID == deptGuid && x.CompanyID == companyId)
@@ -83,7 +90,7 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
     /// <summary>取得必须具有有效部门的审批操作人身份。</summary>
     /// <param name="companyId">当前企业 ID。</param>
     /// <returns>审批账号和必需的部门。</returns>
-    private async Task<(SYS_CompanyUser User, Live_Partner Department)> GetActorAsync(int companyId)
+    private async Task<(Live_Personnel User, Live_Partner Department)> GetActorAsync(int companyId)
     {
         var (user, department) = await GetViewerAsync(companyId);
         if (department is null)
@@ -128,7 +135,7 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
         {
             var node = ordered[index];
             if (node.NodeSeq != index + 1 || string.IsNullOrWhiteSpace(node.NodeName) || node.NodeName.Trim().Length > 100 ||
-                node.ApproverDeptId == Guid.Empty || node.ApproverUserId <= 0 || node.ApproverRoleName?.Length > 100 
+                node.ApproverDeptId == Guid.Empty || node.ApproverUserId <= 0 || node.ApproverRoleName?.Length > 100
                 //|| node.AmountThreshold < 0 || decimal.Round(node.AmountThreshold, 2) != node.AmountThreshold 
                 //|| node.AmountOperator is not ("GreaterThan" or "GreaterThanOrEqual")
                 )
@@ -177,7 +184,7 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
             await Context.Updateable<FIN_Reimb_ApprovalProcess>()
                 .SetColumns(x => x.IsActive == false).Where(x => x.CompanyId == companyId && x.IsActive)
                 .ExecuteCommandAsync();
-            
+
             await Context.Insertable(process).IgnoreColumns(x => new { x.Id, x.RowVersion }).ExecuteCommandAsync();
             var nodes = ordered.Select(x => new FIN_Reimb_ApprovalNode
             {
@@ -221,7 +228,7 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
             throw new ArgumentException("分页或申请时间范围无效");
         var actor = await GetViewerAsync(companyId);
         List<Guid>? visibleApplyIds = null;
-        if (_user.PlatformType == PlatformType.XFZMini)
+        if (_user.PlatformType == PlatformType.LZMini)
         {
             var departmentGuid = actor.Department?.PartnerGID ?? Guid.Empty;
             var miniNodeIds = await Context.Queryable<FIN_Reimb_ApprovalNode>()
@@ -246,7 +253,8 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
             if (visibleApplyIds.Count == 0)
                 return new ApprovalPageDto<ApprovalListItemDto>
                 {
-                    PageIndex = query.PageIndex, PageSize = query.PageSize
+                    PageIndex = query.PageIndex,
+                    PageSize = query.PageSize
                 };
         }
         var status = query.ApplyStatus.HasValue ? (byte)query.ApplyStatus.Value : (byte?)null;
@@ -466,7 +474,7 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
                 .AsSpan(0, 16));
         if (idempotencyKey is not null && await DecisionExistsAsync(recordGuid, actor.User.UserID, applyGuid, action))
             return;
-        Context.Ado.BeginTran();
+        await Context.Ado.BeginTranAsync();
         try
         {
             var apply = await Context.Queryable<FIN_Reimb_Apply>()
@@ -557,11 +565,11 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
             }
             if ((action == ApprovalActionType.Reject || next is null) && changed != 1)
                 throw new InvalidOperationException("申请状态已变化，请刷新后重试");
-            Context.Ado.CommitTran();
+            await Context.Ado.CommitTranAsync();
         }
         catch
         {
-            Context.Ado.RollbackTran();
+            await Context.Ado.RollbackTranAsync();
             // 并发重试可能先命中行版本冲突，若记录已落库则视为同一次操作成功。
             if (idempotencyKey is not null &&
                 await DecisionExistsAsync(recordGuid, actor.User.UserID, applyGuid, action))
@@ -589,14 +597,14 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!_user.IsAuthenticated || _user.CompanyID <= 0 || _user.UserID <= 0 ||
-            _user.PlatformType is not (PlatformType.MiniAdmin or PlatformType.XFZMini))
+            _user.PlatformType is not (PlatformType.MiniAdmin or PlatformType.LZMini))
             throw new UnauthorizedAccessException("当前用户不能发起报销审批");
         var companyId = _user.CompanyID;
         var apply = await Context.Queryable<FIN_Reimb_Apply>()
             .FirstAsync(x => x.CompanyId == companyId && x.ApplyGuid == applyGuid);
         if (apply is null || apply.CurrentApprovalInstanceGuid.HasValue)
             throw new InvalidOperationException("申请不存在或已有进行中的审批实例");
-        if (_user.PlatformType == PlatformType.XFZMini && apply.ApplicantId != _user.UserID)
+        if (_user.PlatformType == PlatformType.LZMini && apply.ApplicantId != _user.UserID)
             throw new UnauthorizedAccessException("只有原申请人可以重新发起审批");
         var process = await Context.Queryable<FIN_Reimb_ApprovalProcess>()
             .Where(x => x.CompanyId == companyId && x.IsActive).OrderByDescending(x => x.VersionNo).FirstAsync();
@@ -705,7 +713,7 @@ public sealed class ApprovalService : ServicesBase<FIN_Reimb_ApprovalProcess>, I
     /// <returns>审批人列表。</returns>
     public async Task<List<ApprovalDto>> GetApproversAsync(Guid partnerGid, CancellationToken cancellationToken = default)
     {
-        var result  = await Main.Queryable<Live_Personnel>().Where(it=>it.PartnerGID == partnerGid).Select<ApprovalDto>().ToListAsync();
+        var result = await Main.Queryable<Live_Personnel>().Where(it => it.PartnerGID == partnerGid).Select<ApprovalDto>().ToListAsync();
         return result;
     }
 }

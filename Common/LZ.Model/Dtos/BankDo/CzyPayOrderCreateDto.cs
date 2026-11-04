@@ -46,6 +46,7 @@ namespace LZ.Model.Dtos.BankDo
         public decimal PrivateAmount { get; set; }
         public string ReceiveAccountNo { get; set; }
         public string ReceiveAccountName { get; set; }
+        public string BankBranceCode { get; set; }
         //public string ReceiveAreaNameOfProvince { get; set; }
         //public string ReceiveAreaNameOfCity { get; set; }
         //public string ReceiveBranchCode { get; set; }

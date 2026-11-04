@@ -168,6 +168,7 @@ namespace LZ.Bank.Api.Controllers
                             CardType = "身份证",
                             CreateTime = DateTime.Now,
                             CustomerName = item.CustomerName,
+                            //FilePath = "/upload/",
                             FilePath = "/plkh/",
                             ExcelFileName = string.Empty,
                             OpenBrno = _options.openBrno,
@@ -237,7 +238,220 @@ namespace LZ.Bank.Api.Controllers
                 }
                 catch (Exception e)
                 {
-                    throw new ErrorCodeException(-1, "报表错误" + _bsOptions.Url + "|" + _bsOptions.Port + "|" + _bsOptions.UserName + "|" + _bsOptions.MiMa);
+                    //throw new ErrorCodeException(-1, "报表错误" + _bsOptions.Url + "|" + _bsOptions.Port + "|" + _bsOptions.UserName + "|" + _bsOptions.MiMa + "|" +"upload");
+                    throw new ErrorCodeException(-1, e.ToString());
+                }
+
+                //var excelRes = await _oSSService.UploadOssFile(excelMs, $"BankFile/ICBC/Plkh/{excelFileName}");
+                //if (excelRes.Code == 0)
+                //{
+                //    foreach (var item in openAccountRecords)
+                //    {
+                //        item.ExcelFileName = excelFileName;
+                //        item.FilePath = "/BankFile/ICBC/Plkh/";
+                //    }
+                //}
+
+                var zipMs = new MemoryStream();
+                // 创建 ZipArchive，模式为 Create，leaveOpen: true 确保流在 using 结束后不被关闭
+                using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    foreach (var item in openAccountRecords)
+                    {
+                        string frontFileName = Path.GetFileName(item.CardFrontPath);
+                        string backFileName = Path.GetFileName(item.CardBackPath);
+                        var frontEntry = archive.CreateEntry($"{item.CardID}/{frontFileName}");
+                        using var forntStream = new MemoryStream();
+                        var frontOssRes = await _oSSService.GetObject(item.CardFrontPath.TrimStart('/'), forntStream);
+                        if (frontOssRes)
+                        {
+                            using (var entryStream = frontEntry.Open())
+                            {
+                                forntStream.Position = 0;
+                                await forntStream.CopyToAsync(entryStream);
+                            }
+                        }
+                        else
+                        {
+                            throw new ErrorCodeException(-1, "获取水印图片失败！");
+                        }
+                        var backEntry = archive.CreateEntry($"{item.CardID}/{backFileName}");
+                        using var backStream = new MemoryStream();
+                        var backOssRes = await _oSSService.GetObject(item.CardBackPath.TrimStart('/'), backStream);
+                        if (backOssRes)
+                        {
+                            using (var entryStream = backEntry.Open())
+                            {
+                                backStream.Position = 0;
+                                await backStream.CopyToAsync(entryStream);
+                            }
+                        }
+                        else
+                        {
+                            throw new ErrorCodeException(-1, "获取水印图片失败！");
+                        }
+                    }
+                }
+                // 重置流位置到开头
+                zipMs.Seek(0, SeekOrigin.Begin);
+                string zipFileName = $"xfz_kc_{dt.ToString("yyyyMMdd_HHmmss")}.zip";
+                //string zipFullPath = Path.Combine(_env.WebRootPath, "BankFile", "ICBC", "Plkh", zipFileName);
+
+                using (var client = new SftpClient(_bsOptions.Url, _bsOptions.Port, _bsOptions.UserName, _bsOptions.MiMa))
+                {
+                    client.Connect();
+                    zipMs.Position = 0;
+                    var excelPath = $"/plkh/{zipFileName}";
+                    client.UploadFile(zipMs, excelPath);
+                }
+                foreach (var item in openAccountRecords)
+                {
+                    item.ZipFileName = zipFileName;
+                }
+
+
+
+                //using (var zipFileStream = new FileStream(zipFullPath, FileMode.Create))
+                //{
+                //    throw new ErrorCodeException(-1, "压缩包失败");
+                //}
+
+
+
+
+
+
+                //var imgresult = await _bankIcbcService.OpenAccountUploadImageApplyAsync(zipFullPath, zipFileName, DateTime.Now);
+
+
+                //var aipRes = await _oSSService.UploadOssFile(zipMs, $"BankFile/ICBC/Plkh/{zipFileName}");
+                //if (aipRes.Code == 0)
+                //{
+                //    foreach (var item in openAccountRecords)
+                //    {
+                //        item.ZipFileName = zipFileName;
+                //        item.FilePath = "/BankFile/ICBC/Plkh/";
+                //    }
+                //}
+
+
+                await _service.Add(openAccountRecords);
+                return Ok("suc");
+            }
+            catch (Exception ex)
+            {
+                throw new ErrorCodeException(-1, ex.Message);
+
+            }
+        }
+
+        /// <summary>
+        /// 本地测试上传到ftp
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ErrorCodeException"></exception>
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> UploadTest()
+        {
+            try
+            {
+                var records = await _service.List(t => t.ID == Guid.Parse("b0b6b3d5-4cf2-4d14-9ee6-d541eccc585c"));
+                var dt = DateTime.Now;
+                Live_IcbcOpenAccountRecord openAccountRecord = null;
+                List<Live_IcbcOpenAccountRecord> openAccountRecords = new List<Live_IcbcOpenAccountRecord>();
+                foreach (var item in records)
+                {
+                    var isExist = await _service.Exist(f => f.CardID == item.CardID);
+                    if (!isExist)
+                    {
+                        openAccountRecord = new Live_IcbcOpenAccountRecord()
+                        {
+                            ID = Guid.NewGuid(),
+                            Name = item.Name,
+                            Phone = item.Phone,
+                            Sex = item.Sex,
+                            BirthDate = item.BirthDate,
+                            CardID = item.CardID,
+                            Address = item.Address,
+                            BatchNo = item.BatchNo,
+                            BusinessID = item.BusinessID,
+                            CardEndDate = item.CardEndDate,
+                            CardStartDate = item.CardStartDate,
+                            CardType = "身份证",
+                            CreateTime = DateTime.Now,
+                            CustomerName = item.CustomerName,
+                            FilePath = "/upload/",
+                            ExcelFileName = string.Empty,
+                            OpenBrno = _options.openBrno,
+                            OpenZono = _options.OpenZono,
+                            ZipFileName = string.Empty,
+                            ResCode = string.Empty,
+                            ResMsg = string.Empty,
+                            Status = 0,
+                            SendDate = dt.Date,
+                            CardBackPath = item.CardBackPath,
+                            CardFrontPath = item.CardFrontPath
+                        };
+                        openAccountRecords.Add(openAccountRecord);
+                    }
+                    else
+                    {
+
+                        throw new ErrorCodeException(-1, $"开户失败，{item.CardID}开户信息已存在！");
+                    }
+                }
+                var excelData = openAccountRecords.Select(f => new PlkhExcelRecord()
+                {
+                    ADDRESS = f.Address,
+                    BIRTHDATE = f.BirthDate.Value.ToString("yyyy-MM-dd"),
+                    CHNSNAME = f.Name,
+                    LGEPIRD = f.CardEndDate?.ToString("yyyy-MM-dd"),
+                    LGLDOCNO = f.CardID,
+                    LGLDOCTP = "0000",
+                    NOTES4 = f.CardStartDate?.ToString("yyyy-MM-dd"),
+                    OPENBRNO = f.OpenBrno,
+                    OPENZONO = f.OpenZono,
+                    PHONE1 = f.Phone,
+                    SENDATE = f.SendDate.Value.ToString("yyyyMMdd"),
+                    SEX = f.Sex == "男" ? "0001" : "0002",
+                }).ToList();
+                byte[] excelBytes;
+                try
+                {
+                    excelBytes = NpoiExcelHelper.WriteExcel<PlkhExcelRecord>(excelData, "批量开户");
+                    //using MemoryStream excelMs = new MemoryStream(excelBytes);
+                    string excelFileName = $"xfz_kc_{dt.ToString("yyyyMMdd_HHmmss")}.xlsx";
+                    //string excelFullPath = Path.Combine(_env.WebRootPath, "BankFile", "ICBC", "Plkh", excelFileName);
+                    //using (var excelFileStream = new FileStream(excelFullPath, FileMode.CreateNew))
+                    //{
+                    //    excelMs.Position = 0;
+                    //    excelMs.CopyTo(excelFileStream);
+                    //    await excelFileStream.FlushAsync();
+                    //}
+                    string excelPath = "";
+                    using (var client = new SftpClient(_bsOptions.Url, _bsOptions.Port, _bsOptions.UserName, _bsOptions.MiMa))
+                    {
+                        client.Connect();
+                        using (MemoryStream excelMs = new MemoryStream(excelBytes))
+                        {
+                            //var fileInfo = new FileInfo(excelFullPath);
+                            //var stream = fileInfo.OpenRead();
+                            //var formFile = new FormFile(stream, 0, stream.Length, fileInfo.Name, fileInfo.Name);
+                            //formFile.CopyTo(ms);
+                            excelPath = $"/upload/{excelFileName}";
+                            client.UploadFile(excelMs, excelPath);
+                        }
+                    }
+                    foreach (var item in openAccountRecords)
+                    {
+                        item.ExcelFileName = excelFileName;
+                    }
+                }
+                catch (Exception e)
+                {
+                    //throw new ErrorCodeException(-1, "报表错误" + _bsOptions.Url + "|" + _bsOptions.Port + "|" + _bsOptions.UserName + "|" + _bsOptions.MiMa + "|" +"upload");
+                    throw new ErrorCodeException(-1, e.ToString());
                 }
 
 
@@ -302,7 +516,7 @@ namespace LZ.Bank.Api.Controllers
                 {
                     client.Connect();
                     zipMs.Position = 0;
-                    var excelPath = $"/plkh/{zipFileName}";
+                    var excelPath = $"/upload/{zipFileName}";
                     client.UploadFile(zipMs, excelPath);
                 }
                 foreach (var item in openAccountRecords)

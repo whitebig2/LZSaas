@@ -123,7 +123,7 @@ namespace LZ.Users.API.Controllers
                                     exist.Status = (int)BankWalletEnumType.开通失败;
                                     break;
                             }
-                            exist.Status = Convert.ToInt32(res.Data.OpenacctStatus);
+                            //exist.Status = Convert.ToInt32(res.Data.OpenacctStatus);
                             exist.MediumId = res.Data.MediumId;
                             if (!string.IsNullOrEmpty(res.Data.OpenAcctErrorCode))
                             {
@@ -138,7 +138,7 @@ namespace LZ.Users.API.Controllers
                         else
                         {
                             exist.Code = res.Data.Code.ToString();
-                            exist.Msg = res.Data.Msg =="SUCCESS" ? "未开户" : res.Data.Msg;
+                            exist.Msg = res.Data.Msg =="SUCCESS" ? "已开户" : res.Data.Msg;
                         }
                         await bankWalletService.Update(exist);
                     }
@@ -148,8 +148,31 @@ namespace LZ.Users.API.Controllers
                     }
                 }
             }
-            if(exist !=null && (exist.Status == (int)BankWalletEnumType.开通成功 || exist.Status == (int)BankWalletEnumType.开通中))
+
+
+
+            if(exist !=null && (exist.Status == (int)BankWalletEnumType.开通成功 || exist.Status == (int)BankWalletEnumType.开通中 || exist.Status== (int)BankWalletEnumType.销户申请中))
             {
+                if (exist.Status == (int)BankWalletEnumType.销户申请中) 
+                {
+                    string json = JsonConvert.SerializeObject(exist);
+                    var res = await httpService.PostAsync<BankWalletFinStatusQuery>(ServiceNames.BankService, "/api/BankWallet/QueryFinStatus", json);
+                    if (res.Code == 200)
+                    {
+                        exist.HandleMsg = "注销状态查询";
+                        if (res.Data.Code == 0)
+                        {
+                            exist.Code = res.Data.Code.ToString();
+                            exist.Msg = res.Data.Msg;
+                            exist.CloseStatus = res.Data.Status;
+                            if (exist.CloseStatus == 0)
+                            {
+                                exist.Status = (int)BankWalletEnumType.已销户;
+                            }
+
+                        }
+                        else
+                        {
                             exist.Code = res.Data.Code.ToString();
                             exist.Msg = res.Data.Msg;
                         }
@@ -217,41 +240,71 @@ namespace LZ.Users.API.Controllers
             {
                 throw new ErrorCodeException(-1, "未绑定银行卡");
             }
-            var exist = await bankWalletService.Get(t => t.Name == entry.Name && t.CertNo == entry.CardID && t.Status ==(int)BankWalletEnumType.开通成功);
-            if(exist == null)
+            var exist = await bankWalletService.Get(t => t.Name == entry.Name && t.CertNo == entry.CardID && (t.Status == (int)BankWalletEnumType.开通成功 || t.Status == (int)BankWalletEnumType.销户申请中));
+            if (exist == null)
             {
-                throw new ErrorCodeException(-1, "未开通e钱包");
+                throw new ErrorCodeException(-1, "未开通e钱包,或者已注销");
             }
-
-            string json = JsonConvert.SerializeObject(exist);
-            var res = await httpService.PostAsync<BankWalletAcctClose>(ServiceNames.BankService, "/api/BankWallet/sendSmsBankWalletLogout", json);
-            if (res.Code == 200)
+            if (exist.Status == (int)BankWalletEnumType.销户申请中)
             {
-
-                if (res.Data.Code == 0)
+                string json = JsonConvert.SerializeObject(exist);
+                var res = await httpService.PostAsync<BankWalletFinStatusQuery>(ServiceNames.BankService, "/api/BankWallet/QueryFinStatus", json);
+                if (res.Code == 200)
                 {
-                    exist.CloseCorpSerno = res.Data.CorpSerno;
-                    exist.SmsSendNo = res.Data.SmsSendNo;
+                    exist.HandleMsg = "注销状态查询";
+                    if (res.Data.Code == 0)
+                    {
                         exist.Code = res.Data.Code.ToString();
-
+                        exist.CloseStatus = res.Data.Status;
+                        if (exist.CloseStatus == 0)
+                        {
+                            exist.Status = (int)BankWalletEnumType.已销户;
+                        }
+                    }
+                    else
+                    {
+                        exist.Code = res.Data.Code.ToString();
+                    }
+                    exist.Msg = exist.Status == (int)BankWalletEnumType.销户申请中 ? "销户申请中" : "已注销";
+                    await bankWalletService.Update(exist);
+                    return Ok(new { items = exist, data = res });
                 }
                 else
                 {
-                    exist.Code = res.Data.Code.ToString();
-                    exist.Msg = res.Data.Msg;
+                    throw new ErrorCodeException(-1, res.Message ?? "e钱包电子账户管理类交易状态查询接口失败");
                 }
-                await bankWalletService.Update(exist);
-                return Ok(new { items = exist });
             }
             else
             {
-                throw new ErrorCodeException(-1, res.Message ?? "e钱包销户发验证码失败");
+                string json = JsonConvert.SerializeObject(exist);
+                var res = await httpService.PostAsync<BankWalletAcctClose>(ServiceNames.BankService, "/api/BankWallet/sendSmsBankWalletLogout", json);
+                if (res.Code == 200)
+                {
+
+                    if (res.Data.Code == 0)
+                    {
+                        exist.CloseCorpSerno = res.Data.CorpSerno;
+                        exist.SmsSendNo = res.Data.SmsSendNo;
+                        exist.Code = res.Data.Code.ToString();
+
+                    }
+                    else
+                    {
+                        exist.Code = res.Data.Code.ToString();
+                        exist.Msg = res.Data.Msg;
+                    }
+                    await bankWalletService.Update(exist);
+                    return Ok(new { items = exist, data = res });
+                }
+                else
+                {
+                    throw new ErrorCodeException(-1, res.Message ?? "e钱包销户发验证码失败");
+                }
+
+
+
+
             }
-
-
-
-
-        }
         }
 
 
@@ -261,7 +314,10 @@ namespace LZ.Users.API.Controllers
         public async Task<IActionResult> CloseAcctSmsCheck([FromBody] Model.Live_BankWallet model)
         {
             
-            
+            if(model == null)
+            {
+                throw new ErrorCodeException(-1,"参数错误");
+            }
             string json = JsonConvert.SerializeObject(model);
             var res = await httpService.PostAsync<BankWalletAcctCloseMsgCheck>(ServiceNames.BankService, "/api/BankWallet/sendSmsBankWalletLogoutCheck", json);
             if (res.Code == 200)
@@ -269,14 +325,16 @@ namespace LZ.Users.API.Controllers
 
                 if (res.Data.Code == 0)
                 {
-                    model.Status = (int)BankWalletEnumType.已销户;
+                    model.Status = (int)BankWalletEnumType.销户申请中;
+                    model.Msg = "注销申请中";
                     await bankWalletService.Update(model);
                     return Ok(new { items = model });
 
                 }
                 else
                 {
-                    throw new ErrorCodeException(-1, res.Data.Msg);
+                    model.Msg = res.Data.Msg;
+                    return Ok(new { items = model });
                 }
                 
             }

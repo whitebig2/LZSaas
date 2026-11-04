@@ -298,6 +298,7 @@ namespace LZ.Finance.API.Controllers
                     CardID = f.IdCardNo,
                     BankName = f.Bank,
                     BankNo = f.BankNo,
+                    BankBranceCode = f.BankBranceCode,
                     TransAmount = f.ActualSalarySendCardAmount,
                 }).ToList();
             }
@@ -582,7 +583,7 @@ namespace LZ.Finance.API.Controllers
         }
 
         /// <summary>
-        /// 订单作废（仅待支付可作废；客户工资来源会回滚推送标记）
+        /// 订单作废（待支付、支付失败可作废；客户工资来源会回滚推送标记）
         /// </summary>
         [HttpPut]
         public async Task<IActionResult> SetCancel([FromForm] Guid id)

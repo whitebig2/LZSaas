@@ -1,0 +1,28 @@
+namespace LZ.Model.BaiWangModel.Taxs
+{
+    /// <summary>
+    /// 开始更正请求
+    /// </summary>
+    public class PersonalStartCorrectionRequest
+    {
+        /// <summary>
+        /// 机构税号，长度 6，非必填
+        /// </summary>
+        public string? BelongTaxNo { get; set; }
+
+        /// <summary>
+        /// 申报税号，长度 4，非必填
+        /// </summary>
+        public string? CustomerTaxNo { get; set; }
+
+        /// <summary>
+        /// 税款所属期，长度 17，非必填
+        /// </summary>
+        public string? DeclarationPeriod { get; set; }
+
+        /// <summary>
+        /// 个税收入报表类型，长度 11，非必填
+        /// </summary>
+        public string? PersonalTaxFormType { get; set; }
+    }
+}

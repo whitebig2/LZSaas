@@ -35,6 +35,9 @@ namespace LZ.Model.Options
         /// </summary>
         public string Salt { get; set; } = "";
 
+
+        public string OrgAuthCode { get; set; } = "";
+
         /// <summary>
         /// 接口地址，沙箱：https://sandbox-openapi.baiwang.com，正式：https://openapi.baiwang.com
         /// </summary>

@@ -6,6 +6,8 @@ namespace LZ.Invoice.Api
     {
         public static async Task Main(string[] args)
         {
+            Console.Title = "- 发票服务";
+
             var builder = WebApplication.CreateBuilder(args);
 
             var appModel = new LZ.Model.AppliationModel();
