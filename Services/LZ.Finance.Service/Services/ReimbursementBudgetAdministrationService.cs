@@ -73,21 +73,23 @@ public sealed class ReimbursementBudgetAdministrationService : ServicesBase<FIN_
         CancellationToken token = default)
     {
         var companyId = CompanyId;
-        Context.Ado.BeginTran();
+        await Context.Ado.BeginTranAsync();
         try
         {
             var partners = await ValidateConfigAsync(input, null, companyId, token);
             var config = new FIN_Reimb_BudgetConfig
             {
-                GID = Guid.NewGuid(), CompanyID = companyId, CompanyGID = _user.CompanyGID,
+                GID = Guid.NewGuid(),
+                CompanyID = companyId,
+                CompanyGID = _user.CompanyGID,
                 CreateTime = DateTime.Now
             };
             CopyConfig(input, partners, config);
             config.ID = await Context.Insertable(config).ExecuteReturnIdentityAsync();
-            Context.Ado.CommitTran();
+            await Context.Ado.CommitTranAsync();
             return config;
         }
-        catch { Context.Ado.RollbackTran(); throw; }
+        catch { await Context.Ado.RollbackTranAsync(); throw; }
     }
 
     public async Task<FIN_Reimb_BudgetConfig> UpdateConfigAsync(int id,
@@ -100,15 +102,27 @@ public sealed class ReimbursementBudgetAdministrationService : ServicesBase<FIN_
             var config = await GetConfigAsync(id, token) ?? throw new KeyNotFoundException("预算配置不存在");
             var partners = await ValidateConfigAsync(input, id, companyId, token);
             var hasPools = await Context.Queryable<FIN_Reimb_BudgetManage>()
-                .AnyAsync(x => x.CompanyID == companyId && x.CostType == config.CostType);
+                .AnyAsync(x => x.CompanyID == companyId && x.CostType == config.CostType &&
+                               x.ExpensesTitle == config.Title);
             if (hasPools && (config.CostType != input.CostType || config.Title != input.Title.Trim() ||
                 config.IsRelate != input.IsRelate ||
                 (config.PartnerIDS ?? string.Empty) != string.Join(',', partners.Select(x => x.PartnerGID))))
                 throw new InvalidOperationException("已生成预算池，不能修改配置的定位字段");
             CopyConfig(input, partners, config);
             var changed = await Context.Updateable(config)
-                .UpdateColumns(x => new { x.Title, x.CostType, x.GenerateType, x.Percentage, x.Enable,
-                    x.DirectlyPass, x.PublicUse, x.IsRelate, x.PartnerIDS, x.PartnerNames })
+                .UpdateColumns(x => new
+                {
+                    x.Title,
+                    x.CostType,
+                    x.GenerateType,
+                    x.Percentage,
+                    x.Enable,
+                    x.DirectlyPass,
+                    x.PublicUse,
+                    x.IsRelate,
+                    x.PartnerIDS,
+                    x.PartnerNames
+                })
                 .Where(x => x.ID == id && x.CompanyID == companyId).ExecuteCommandAsync();
             if (changed != 1) throw new InvalidOperationException("预算配置已变化，请刷新后重试");
             Context.Ado.CommitTran();
@@ -122,7 +136,8 @@ public sealed class ReimbursementBudgetAdministrationService : ServicesBase<FIN_
         var companyId = CompanyId;
         var config = await GetConfigAsync(id, token) ?? throw new KeyNotFoundException("预算配置不存在");
         var hasPools = await Context.Queryable<FIN_Reimb_BudgetManage>()
-            .AnyAsync(x => x.CompanyID == companyId && x.CostType == config.CostType);
+            .AnyAsync(x => x.CompanyID == companyId && x.CostType == config.CostType &&
+                           x.ExpensesTitle == config.Title);
         if (hasPools) throw new InvalidOperationException("配置已生成预算池，不能删除");
         await Context.Deleteable<FIN_Reimb_BudgetConfig>()
             .Where(x => x.ID == id && x.CompanyID == companyId).ExecuteCommandAsync();
@@ -186,23 +201,29 @@ public sealed class ReimbursementBudgetAdministrationService : ServicesBase<FIN_
             .Where(x => x.CompanyID == companyId && x.Enabled && x.IsBudget && x.PartnerGID != null)
             .ToListAsync();
         var configs = await Context.Queryable<FIN_Reimb_BudgetConfig>()
-            .Where(x => x.CompanyID == companyId && x.Enable).ToListAsync();
+            .Where(x => x.CompanyID == companyId && x.Enable && x.IsRelate).ToListAsync();
         if (configs.Count > 0 && partners.Count == 0)
             throw new InvalidOperationException("当前公司没有启用预算的部门，无法生成预算池");
         var desired = new List<FIN_Reimb_BudgetManage>();
         foreach (var config in configs)
         {
             var allowed = ParsePartnerIds(config.PartnerIDS);
-            foreach (var partner in partners.Where(p => !config.IsRelate || allowed.Contains(p.PartnerGID!.Value)))
+            foreach (var partner in partners.Where(p => allowed.Contains(p.PartnerGID!.Value)))
             {
                 desired.Add(new FIN_Reimb_BudgetManage
                 {
-                    CompanyID = companyId, CompanyGID = _user.CompanyGID, Year = budgetYear,
-                    PartnerID = partner.PartnerID, PartnerGID = partner.PartnerGID,
+                    CompanyID = companyId,
+                    CompanyGID = _user.CompanyGID,
+                    Year = budgetYear,
+                    PartnerID = partner.PartnerID,
+                    PartnerGID = partner.PartnerGID,
                     PartnerName = partner.PartnerName,
-                    CostType = config.CostType, GenerateType = config.GenerateType,
-                    ExpensesTitle = config.Title, Percentage = config.Percentage,
-                    DirectlyPass = config.DirectlyPass, PublicUse = config.PublicUse,
+                    CostType = config.CostType,
+                    GenerateType = config.GenerateType,
+                    ExpensesTitle = config.Title,
+                    Percentage = config.Percentage,
+                    DirectlyPass = config.DirectlyPass,
+                    PublicUse = config.PublicUse,
                     CreateTime = DateTime.Now
                 });
             }
@@ -434,9 +455,9 @@ public sealed class ReimbursementBudgetAdministrationService : ServicesBase<FIN_
             .ToListAsync();
         if (others.Any(x => x.Title == input.Title.Trim()))
             throw new InvalidOperationException("当前成本类型下预算名称已存在");
-        if (input.Enable && others.Where(x => x.Enable).Any(x => !x.IsRelate || !input.IsRelate ||
+        if (input.Enable && input.IsRelate && others.Any(x => x.Enable && x.IsRelate &&
             ParsePartnerIds(x.PartnerIDS).Overlaps(ids)))
-            throw new InvalidOperationException("同一成本类型的启用配置覆盖了相同部门");
+            throw new InvalidOperationException("同一成本类型的启用关联配置覆盖了相同部门");
         return partners.OrderBy(x => ids.IndexOf(x.PartnerGID!.Value)).ToList();
     }
 

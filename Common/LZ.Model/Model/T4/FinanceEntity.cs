@@ -1860,7 +1860,7 @@ namespace LZ.Model
 
 
 	/// <summary>
-	///  - 实体层
+	/// 申请类型 - 实体层
 	/// </summary>
 	[Serializable]
 	[TenantAttribute("Finance")]
@@ -1924,7 +1924,7 @@ namespace LZ.Model
 		/// <summary>
 		/// 
 		/// </summary>		
-		
+		[SugarColumn(IsNullable=false)]
 		public  DateTime? PublishedAt { get; set; }
 		
 		/// <summary>
@@ -1932,6 +1932,12 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  byte[] RowVersion { get; set; }
+		
+		/// <summary>
+		/// 申请类型
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  byte ApplyType { get; set; }
 		   
     }
 
@@ -2034,66 +2040,6 @@ namespace LZ.Model
 		/// </summary>		
 		[SugarColumn(IsNullable=false)]
 		public  DateTime? OperatedAt { get; set; }
-		   
-    }
-
-
-
-	/// <summary>
-	///  - 实体层
-	/// </summary>
-	[Serializable]
-	[TenantAttribute("Finance")]
-	public partial class FIN_Reimb_BudgetMonthReport
-    {
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false,IsIdentity=true)]
-		public  int ID { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  int? BudgetReportId { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string MainTitle { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  string Title { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  int DataType { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  int QuarterType { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		
-		public  DateTime? CreateTime { get; set; }
-		
-		/// <summary>
-		/// 
-		/// </summary>		
-		[SugarColumn(IsNullable=false)]
-		public  decimal BusinessIncome { get; set; }
 		   
     }
 
@@ -2610,6 +2556,66 @@ namespace LZ.Model
 		/// </summary>		
 		
 		public  string PartnerName { get; set; }
+		   
+    }
+
+
+
+	/// <summary>
+	///  - 实体层
+	/// </summary>
+	[Serializable]
+	[TenantAttribute("Finance")]
+	public partial class FIN_Reimb_BudgetMonthReport
+    {
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false,IsIdentity=true)]
+		public  int ID { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  int? BudgetReportId { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string MainTitle { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  string Title { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int DataType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  int QuarterType { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		
+		public  DateTime? CreateTime { get; set; }
+		
+		/// <summary>
+		/// 
+		/// </summary>		
+		[SugarColumn(IsNullable=false)]
+		public  decimal BusinessIncome { get; set; }
 		   
     }
 

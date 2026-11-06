@@ -5,10 +5,10 @@ namespace LZ.Finance.Service.Interface;
 
 public interface IApprovalService
 {
-    /// <summary>查询当前企业已发布的审批流程。</summary>
+    /// <summary>查询当前企业已发布的报销及付款审批流程。</summary>
     /// <param name="cancellationToken">请求取消令牌。</param>
-    /// <returns>生效流程；未配置时为 null。</returns>
-    Task<ApprovalProcessDto?> GetActiveProcessAsync(CancellationToken cancellationToken = default);
+    /// <returns>按申请类型区分的生效流程；均未配置时为 null。</returns>
+    Task<ActiveApprovalProcessesDto?> GetActiveProcessAsync(CancellationToken cancellationToken = default);
     /// <summary>保存并发布审批流程及动态节点。</summary>
     /// <param name="request">流程与节点配置。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>

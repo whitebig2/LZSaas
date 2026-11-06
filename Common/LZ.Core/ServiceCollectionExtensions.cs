@@ -149,7 +149,7 @@ namespace LZ.Core
             builder.Services.AddServices<ISingletonDependency>(ServiceLifetime.Singleton);
 
             builder.Services.AddAuthentication("Authorization-Token").AddScheme<RequestAuthenticationSchemeOptions, RequestAuthenticationHandler>("Authorization-Token", options => { });
-            builder.Services.AddMCodeConsul();
+            //builder.Services.AddMCodeConsul();
             builder.Services.AddControllers(options =>
             {
                 options.Filters.Add<RequestAsyncResultFilter>();//统一接口返回的处理
@@ -282,9 +282,9 @@ namespace LZ.Core
             });
 
             #endregion
-            builder.Services.AddRabbitMQ(builder.Configuration);
+            //builder.Services.AddRabbitMQ(builder.Configuration);
             // 本地开发不需要 MQ 时，注册空实现避免 DI 解析失败
-            //builder.Services.AddSingleton<LZ.Core.RabbitMQ.EventBus.IEventPublisher, LZ.Core.RabbitMQ.NullEventPublisher>();
+            builder.Services.AddSingleton<LZ.Core.RabbitMQ.EventBus.IEventPublisher, LZ.Core.RabbitMQ.NullEventPublisher>();
 
             builder.Services.AddSingleton<IContentTypeProvider, FileExtensionContentTypeProvider>();
 

@@ -2,35 +2,28 @@ using LZ.Core;
 using LZ.Core.Interface;
 using LZ.Finance.Service.Interface;
 using LZ.Model;
-using Microsoft.Extensions.Configuration;
 using SqlSugar;
-using SqlSugar.IOC;
 
 namespace LZ.Finance.Service.Services;
 
 public sealed class ReimbursementBudgetPoolLocator : IBudgetPoolLocator, IScopedDependency
 {
-    private readonly IConfiguration? _configuration;
-
-    public ReimbursementBudgetPoolLocator(IConfiguration? configuration = null) => _configuration = configuration;
-
-    public async Task<FIN_Reimb_BudgetManage> LocateAsync(ISqlSugarClient finance, int companyId,
-        int userId, int costTypeId, DateTime now, CancellationToken cancellationToken)
+    public async Task<Live_BudgetManage> LocateAsync(ISqlSugarClient main, int companyId,
+        int userId, int costTypeId, string expenseName, DateTime now, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var startMonth = _configuration?.GetValue<int?>("Reimbursement:Budget:FiscalYearStartMonth") ?? 4;
-        var year = startMonth <= 1 ? now.Year : now.AddMonths(-(startMonth - 1)).Year;
-        var person = await DbScoped.SugarScope.GetConnection("Main").Queryable<Live_Personnel>()
+        var year = now.AddMonths(-3).Year;
+        var person = await main.Queryable<Live_Personnel>()
             .FirstAsync(x => x.CompanyID == companyId && x.UserID == userId && x.Enabled);
-        var pools = await finance.Queryable<FIN_Reimb_BudgetManage>()
-            .Where(x => x.CompanyID == companyId && x.Year == year && x.CostType == costTypeId && !x.Hidden)
+        if (person?.PartnerGID is not Guid partnerGid)
+            throw new InvalidOperationException("当前用户未绑定老预算服务商");
+        var pools = await main.Queryable<Live_BudgetManage>()
+            .Where(x => x.CompanyID == companyId && x.Year == year && x.PartnerGID == partnerGid &&
+                        x.CostType == costTypeId && x.ExpensesTitle == expenseName && !x.Hidden)
             .ToListAsync();
-        var departmentPools = pools.Where(x => x.PartnerGID.HasValue && x.PartnerGID == person?.PartnerGID).ToList();
-        var matches = departmentPools.Count > 0 ? departmentPools :
-            pools.Where(x => !x.PartnerGID.HasValue).ToList();
-        if (matches.Count != 1)
-            throw new InvalidOperationException(matches.Count == 0 ? "当前公司、成本类型及预算年度未配置预算池" :
-                "当前公司、成本类型及预算年度匹配多个预算池");
-        return matches[0];
+        if (pools.Count != 1)
+            throw new InvalidOperationException(pools.Count == 0 ? "当前企业、服务商、费用及预算年度未配置老预算池" :
+                "当前企业、服务商、费用及预算年度匹配多个老预算池");
+        return pools[0];
     }
 }

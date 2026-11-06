@@ -15,7 +15,7 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
 {
     private readonly ICurrentUser _user;
 
-    /// <summary>接入当前用户以限定本人和企业数据范围。</summary>
+    /// <summary>接入当前用户以限定平台和企业数据范围。</summary>
     /// <param name="user">当前登录用户。</param>
     public ReimbursementReadService(ICurrentUser user) => _user = user;
     private ISqlSugarClient Main => DbScoped.SugarScope.GetConnection("Main");
@@ -25,16 +25,16 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
         get
         {
             if (!_user.IsAuthenticated || _user.CompanyID <= 0 || _user.UserID <= 0 ||
-                _user.PlatformType != PlatformType.LZMini)
-                throw new UnauthorizedAccessException("仅当前企业的小程序用户可访问本人报销记录");
+                _user.PlatformType is not (PlatformType.LZMini or PlatformType.MiniAdmin))
+                throw new UnauthorizedAccessException("仅当前企业人员可访问本人报销记录");
             return _user.CompanyID;
         }
     }
 
-    /// <summary>分页查询当前小程序用户的报销和付款申请。</summary>
+    /// <summary>分页查询小程序本人或分后台当前企业的报销和付款申请。</summary>
     /// <param name="query">状态、费用名称、时间、关键字和分页条件。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
-    /// <returns>本人申请分页及各单可用操作。</returns>
+    /// <returns>可见申请分页及各单可用操作。</returns>
     public async Task<ApplicationPageDto<ApplicationListItemDto>> GetApplicationsAsync(
         ApplicationQuery query, CancellationToken cancellationToken = default)
     {
@@ -44,7 +44,7 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
             query.ApplyTimeStart > query.ApplyTimeEnd)
             throw new ArgumentException("分页或申请时间范围无效");
 
-        // 本人列表始终带租户和申请人条件，查询参数只能进一步缩小范围。
+        // TODO: MiniAdmin 过渡期展示企业全部申请；人员数据就绪后恢复分后台用户范围。
         var status = query.ApplyStatus.HasValue ? (byte)query.ApplyStatus.Value : (byte?)null;
         var supplementStatus = query.InvoiceSupplementStatus.HasValue
             ? (byte)query.InvoiceSupplementStatus.Value : (byte?)null;
@@ -52,7 +52,8 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
         var expenseName = query.ExpenseName?.Trim();
         var count = new RefAsync<int>();
         var applies = await Context.Queryable<FIN_Reimb_Apply>()
-            .Where(x => x.CompanyId == companyId && x.ApplicantId == _user.UserID)
+            .Where(x => x.CompanyId == companyId)
+            .WhereIF(_user.PlatformType == PlatformType.LZMini, x => x.ApplicantId == _user.UserID)
             .WhereIF(status.HasValue, x => x.ApplyStatus == status)
             .WhereIF(supplementStatus.HasValue, x => x.InvoiceSupplementStatus == supplementStatus)
             .WhereIF(!string.IsNullOrEmpty(expenseName), x => x.ExpenseName.Contains(expenseName!))
@@ -67,11 +68,11 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
             PageIndex = query.PageIndex,
             PageSize = query.PageSize,
             TotalCount = count.Value,
-            Items = applies.Select(MapListItem).ToList()
+            Items = applies.Select(x => MapListItem(x, x.ApplicantId == _user.UserID)).ToList()
         };
     }
 
-    /// <summary>组合本人申请、发票、审批轨迹、补票异常和打款详情。</summary>
+    /// <summary>组合可见申请、发票、审批轨迹、补票异常和打款详情。</summary>
     /// <param name="applyGuid">申请 GUID。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>申请详情；不存在时为 null。</returns>
@@ -80,7 +81,7 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
     {
         cancellationToken.ThrowIfCancellationRequested();
         var companyId = CompanyId;
-        var apply = await FindOwnedApplicationAsync(applyGuid, companyId);
+        var apply = await FindVisibleApplicationAsync(applyGuid, companyId);
         if (apply is null) return null;
 
         var detail = new ApplicationDetailDto
@@ -97,7 +98,7 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
             Remark = apply.Remark,
             LastRejectReason = apply.LastRejectReason
         };
-        CopyListFields(MapListItem(apply), detail);
+        CopyListFields(MapListItem(apply, apply.ApplicantId == _user.UserID), detail);
 
         var relations = await Context.Queryable<FIN_Reimb_ApplyInvoice>()
             .Where(x => x.CompanyId == companyId && x.ApplyGuid == applyGuid && x.IsActive).ToListAsync();
@@ -192,7 +193,7 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
         return new ResubmitPreloadDto { Application = application };
     }
 
-    /// <summary>查询本人申请关联的打款单。</summary>
+    /// <summary>查询可见申请关联的打款单。</summary>
     /// <param name="applyGuid">申请 GUID。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>打款单；无记录时为 null。</returns>
@@ -201,7 +202,7 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
     {
         cancellationToken.ThrowIfCancellationRequested();
         var companyId = CompanyId;
-        if (await FindOwnedApplicationAsync(applyGuid, companyId) is null) return null;
+        if (await FindVisibleApplicationAsync(applyGuid, companyId) is null) return null;
         return await GetPaymentOrderCoreAsync(companyId, applyGuid);
     }
 
@@ -216,7 +217,19 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
         var companyId = CompanyId;
         var upload = await Context.Queryable<FIN_Reimb_InvoiceUpload>()
             .FirstAsync(x => x.CompanyId == companyId && x.UploadUserId == _user.UserID && x.UploadGuid == uploadGuid);
-        return upload is null ? null : MapUpload(upload);
+        if (upload is null) return null;
+        var result = MapUpload(upload);
+        if (upload.UploadPurpose == (byte)InvoiceUploadPurpose.Supplement && upload.ApplyGuid.HasValue)
+        {
+            var apply = await FindOwnedApplicationAsync(upload.ApplyGuid.Value, companyId);
+            if (apply is not null)
+            {
+                result.CumulativeInvoiceTotalAmount = apply.InvoiceTotalAmount;
+                result.RemainingInvoiceAmount = Math.Max(0, apply.ApplyAmount - apply.InvoiceTotalAmount);
+                result.InvoiceSupplementStatus = (InvoiceSupplementStatus)apply.InvoiceSupplementStatus;
+            }
+        }
+        return result;
     }
 
     /// <summary>只读统计有效发票金额并检查是否覆盖申请金额。</summary>
@@ -281,6 +294,13 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
         Context.Queryable<FIN_Reimb_Apply>()
             .FirstAsync(x => x.CompanyId == companyId && x.ApplicantId == _user.UserID && x.ApplyGuid == applyGuid);
 
+    // TODO: MiniAdmin 过渡期按企业读取申请详情和打款单；人员数据就绪后恢复分后台用户范围。
+    private Task<FIN_Reimb_Apply> FindVisibleApplicationAsync(Guid applyGuid, int companyId) =>
+        Context.Queryable<FIN_Reimb_Apply>()
+            .Where(x => x.CompanyId == companyId && x.ApplyGuid == applyGuid)
+            .WhereIF(_user.PlatformType == PlatformType.LZMini, x => x.ApplicantId == _user.UserID)
+            .FirstAsync();
+
     /// <summary>在已完成申请归属校验后读取打款单。</summary>
     /// <param name="companyId">当前企业 ID。</param>
     /// <param name="applyGuid">申请 GUID。</param>
@@ -318,8 +338,9 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
 
     /// <summary>生成申请列表项及详情、补票、再次申请操作标识。</summary>
     /// <param name="apply">申请实体。</param>
+    /// <param name="canManage">当前用户是否为申请人。</param>
     /// <returns>列表项 DTO。</returns>
-    private static ApplicationListItemDto MapListItem(FIN_Reimb_Apply apply)
+    private static ApplicationListItemDto MapListItem(FIN_Reimb_Apply apply, bool canManage)
     {
         var item = new ApplicationListItemDto
         {
@@ -351,10 +372,10 @@ public sealed class ReimbursementReadService : ServicesBase<FIN_Reimb_Apply>, IR
             SubmittedAt = apply.SubmittedAt
         };
         item.Actions.Add("detail");
-        if (apply.ApplyType == 2 && apply.InvoiceSupplementStatus == 1)
+        if (canManage && apply.ApplyType == 2 && apply.InvoiceSupplementStatus == 1)
             item.Actions.Add("supplement");
-        if (apply.ApplyStatus is (byte)ReimbursementApplyStatus.ReviewReturned or
-            (byte)ReimbursementApplyStatus.Paid)
+        if (canManage && (apply.ApplyStatus == (byte)ReimbursementApplyStatus.ReviewReturned ||
+            apply.ApplyStatus == (byte)ReimbursementApplyStatus.Paid))
             item.Actions.Add("resubmit");
         return item;
     }

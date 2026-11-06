@@ -4,6 +4,7 @@ namespace LZ.Model.Dtos.Reimbusement;
 
 public sealed class ApprovalProcessSaveRequest
 {
+    public ReimbursementApplyType ApplyType { get; set; }
     public string ProcessName { get; set; } = "报销审批流程";
     public string? Description { get; set; }
     public List<ApprovalNodeSaveRequest> Nodes { get; set; } = new();
@@ -24,12 +25,19 @@ public sealed class ApprovalNodeSaveRequest
 
 public sealed class ApprovalProcessDto
 {
+    public ReimbursementApplyType ApplyType { get; set; }
     public Guid ProcessGuid { get; set; }
     public string ProcessName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int VersionNo { get; set; }
     public DateTime? PublishedAt { get; set; }
     public List<ApprovalNodeDto> Nodes { get; set; } = new();
+}
+
+public sealed class ActiveApprovalProcessesDto
+{
+    public ApprovalProcessDto? ReimbursementApproval { get; set; }
+    public ApprovalProcessDto? PaymentApproval { get; set; }
 }
 
 public sealed class ApprovalNodeDto

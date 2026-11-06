@@ -11,11 +11,20 @@ namespace LZ.Model.Enums.Reimbusement
     /// </summary>
     public enum ApprovalInstanceStatus : byte
     {
+        /// <summary>
+        /// 进行中
+        /// </summary>
         [System.ComponentModel.Description("进行中")]
         InProgress = 1,
+        /// <summary>
+        /// 已通过
+        /// </summary>
 
         [System.ComponentModel.Description("已通过")]
         Approved = 2,
+        /// <summary>
+        /// 已退回
+        /// </summary>
 
         [System.ComponentModel.Description("已退回")]
         Returned = 3

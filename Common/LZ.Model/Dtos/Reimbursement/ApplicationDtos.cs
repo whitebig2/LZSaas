@@ -109,7 +109,7 @@ public sealed class ResubmitPreloadDto
 /// <summary>单次发票上传的识别、验真和查重结果；IsEffective 为 true 时才可计入申请票额。</summary>
 public sealed class InvoiceUploadDto
 {
-    /// <summary>本次上传记录标识，提交申请或补传时放入 UploadGuids。</summary>
+    /// <summary>本次上传记录标识；首次申请提交时放入 UploadGuids，补传上传后自动关联。</summary>
     public Guid UploadGuid { get; set; }
     /// <summary>识别状态：0 待识别，1 成功，2 失败。</summary>
     public byte RecognitionStatus { get; set; }
@@ -125,6 +125,12 @@ public sealed class InvoiceUploadDto
     public decimal? TotalAmount { get; set; }
     /// <summary>失败时展示给上传人的提示；成功时为空。</summary>
     public string? FailureMessage { get; set; }
+    /// <summary>补传后申请累计的有效发票金额；首次上传时为空。</summary>
+    public decimal? CumulativeInvoiceTotalAmount { get; set; }
+    /// <summary>补传后尚缺的发票金额；首次上传时为空。</summary>
+    public decimal? RemainingInvoiceAmount { get; set; }
+    /// <summary>付款申请的补传状态；首次上传时为空。</summary>
+    public InvoiceSupplementStatus? InvoiceSupplementStatus { get; set; }
 }
 
 /// <summary>多张发票提交前预校验请求；仅计算金额，不绑定到申请。</summary>

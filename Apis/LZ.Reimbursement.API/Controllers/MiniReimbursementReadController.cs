@@ -2,7 +2,9 @@ using LZ.Core.Attributes;
 using LZ.Finance.Service.Interface;
 using LZ.Model.Dtos.Reimbursement;
 using LZ.Model.Enums;
+using LZ.Model.Enums.Reimbusement;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LZ.Reimbursement.API.Controllers;
@@ -67,15 +69,31 @@ public sealed class MiniReimbursementReadController : ReimbursementControllerBas
     public Task<IActionResult> PayeeBanks(CancellationToken cancellationToken) =>
         DictionaryAsync("payee-banks", null, null, cancellationToken);
 
-    /// <summary>上传首次申请或补传发票，并同步完成识别、验真和查重。</summary>
+    /// <summary>上传首次申请或补传发票；有效补传发票自动累计至付款申请并更新补票状态。</summary>
     /// <param name="request">文件、上传用途；补传时须包含申请 GUID。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
-    /// <returns>上传 GUID 和发票校验结果。</returns>
+    /// <returns>上传 GUID、校验结果及补传后的累计票额与缺口。</returns>
     [HttpPost]
     [Consumes("multipart/form-data")]
     public Task<IActionResult> UploadInvoice([FromForm] InvoiceUploadRequest request,
         CancellationToken cancellationToken) =>
         ExecuteAsync(async () => ToCamelCase(Ok(await _invoices.UploadAsync(request, cancellationToken))));
+
+    /// <summary>逐张补传付款申请发票，成功校验后立即累计金额并更新补票状态。</summary>
+    /// <param name="applyGuid">待补票付款申请 GUID。</param>
+    /// <param name="file">PDF 或图片发票文件。</param>
+    /// <param name="cancellationToken">请求取消令牌。</param>
+    /// <returns>识别结果、申请累计票额、剩余缺口和补票状态。</returns>
+    [HttpPost]
+    [Consumes("multipart/form-data")]
+    public Task<IActionResult> UploadSupplementInvoice([FromQuery] Guid applyGuid, IFormFile file,
+        CancellationToken cancellationToken) =>
+        ExecuteAsync(async () => ToCamelCase(Ok(await _invoices.UploadAsync(new InvoiceUploadRequest
+        {
+            ApplyGuid = applyGuid,
+            UploadPurpose = InvoiceUploadPurpose.Supplement,
+            File = file
+        }, cancellationToken))));
 
     /// <summary>查询当前申请人所属部门使用审核版还是预算版流程。</summary>
     /// <param name="cancellationToken">请求取消令牌。</param>
@@ -111,7 +129,7 @@ public sealed class MiniReimbursementReadController : ReimbursementControllerBas
         CancellationToken cancellationToken) =>
         ExecuteAsync(async () => ToCamelCase(Ok(await _write.ResubmitAsync(applyGuid, request, cancellationToken))));
 
-    /// <summary>为待补票的付款申请关联新发票并重算缺口。</summary>
+    /// <summary>关联已上传但尚未计入申请的补传发票，可用于上传后关联失败的重试。</summary>
     /// <param name="applyGuid">付款申请 GUID。</param>
     /// <param name="request">已完成识别的补传上传 GUID 和幂等键。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LZ.Reimbursement.API.Controllers;
+
 [PlatformLimit(PlatformType.LZMini)]
 
 public sealed class MiniApprovalController : ReimbursementControllerBase
@@ -58,8 +59,8 @@ public sealed class MiniApprovalController : ReimbursementControllerBase
     /// <param name="request">审批意见和幂等键。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>操作结果及申请 GUID。</returns>
-    [HttpPost]
-    public Task<IActionResult> Approve(Guid applyGuid, [FromBody] MiniApproveRequest request,
+    [HttpPost("{applyGuid}")]
+    public Task<IActionResult> Approve([FromRoute] Guid applyGuid, [FromBody] MiniApproveRequest request,
         CancellationToken cancellationToken) => ExecuteAsync(async () =>
     {
         if (request is null) throw new ArgumentException("审批请求不能为空");
@@ -74,8 +75,8 @@ public sealed class MiniApprovalController : ReimbursementControllerBase
     /// <param name="request">驳回原因和幂等键。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>操作结果及申请 GUID。</returns>
-    [HttpPost]
-    public Task<IActionResult> Reject(Guid applyGuid, [FromBody] MiniRejectRequest request,
+    [HttpPost("{applyGuid}")]
+    public Task<IActionResult> Reject([FromRoute] Guid applyGuid, [FromBody] MiniRejectRequest request,
         CancellationToken cancellationToken) => ExecuteAsync(async () =>
     {
         if (request is null) throw new ArgumentException("驳回请求不能为空");
@@ -102,6 +103,9 @@ public sealed class MiniApprovalController : ReimbursementControllerBase
     /// <returns>审批错误响应。</returns>
     private IActionResult Error(int status, string message) => new JsonResult(new ApiResponse<object>
     {
-        Code = status, Message = message, TraceId = HttpContext.TraceIdentifier
-    }) { StatusCode = status };
+        Code = status,
+        Message = message,
+        TraceId = HttpContext.TraceIdentifier
+    })
+    { StatusCode = status };
 }

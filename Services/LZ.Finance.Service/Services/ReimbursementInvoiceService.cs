@@ -8,6 +8,7 @@ using LZ.Model.Enums;
 using LZ.Model.Enums.Reimbusement;
 using LZ.ApiService.Interface;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SqlSugar;
 
 namespace LZ.Finance.Service.Services;
@@ -20,19 +21,26 @@ public sealed class ReimbursementInvoiceService : ServicesBase<FIN_Reimb_Invoice
     private readonly IAliyunOSSService _oss;
     private readonly IServiceProvider _services;
     private readonly IReimbursementInvoiceRecognitionClient _recognition;
+    private readonly IReimbursementWriteService _write;
+    private readonly ILogger<ReimbursementInvoiceService> _logger;
 
     /// <summary>接入当前用户、OSS 和可选的发票/字典扩展服务。</summary>
     /// <param name="user">当前登录用户。</param>
     /// <param name="oss">发票文件存储服务。</param>
     /// <param name="services">解析外部发票和字典提供方的服务容器。</param>
     /// <param name="recognition">报销专用的 OCR 与百望云验真适配器。</param>
+    /// <param name="write">将有效补传发票关联申请并更新累计票额。</param>
+    /// <param name="logger">记录发票识别及验真异常。</param>
     public ReimbursementInvoiceService(ICurrentUser user, IAliyunOSSService oss, IServiceProvider services,
-        IReimbursementInvoiceRecognitionClient recognition)
+        IReimbursementInvoiceRecognitionClient recognition, IReimbursementWriteService write,
+        ILogger<ReimbursementInvoiceService> logger)
     {
         _user = user;
         _oss = oss;
         _services = services;
         _recognition = recognition;
+        _write = write;
+        _logger = logger;
     }
 
     private int CompanyId
@@ -45,7 +53,7 @@ public sealed class ReimbursementInvoiceService : ServicesBase<FIN_Reimb_Invoice
         }
     }
 
-    /// <summary>保存首次或补传发票，同步完成识别、验真与查重。</summary>
+    /// <summary>保存并校验发票；有效补传发票同时计入付款申请。</summary>
     /// <param name="request">文件、上传用途和补传申请 GUID。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>InvoiceUploadDto，包含上传 GUID、识别/验真/查重状态、有效性和票面金额。</returns>
@@ -79,7 +87,8 @@ public sealed class ReimbursementInvoiceService : ServicesBase<FIN_Reimb_Invoice
         uploadStream.Position = 0;
         var saved = await _oss.UploadFile(uploadStream, request.File.FileName, true, false, "reimbursement/invoices");
         if (saved.Code != 0 || saved.Data is not string fileUrl || string.IsNullOrWhiteSpace(fileUrl))
-            throw new InvalidOperationException("发票文件上传失败");
+            throw new InvalidOperationException(saved.Code != 0 && !string.IsNullOrWhiteSpace(saved.Message)
+                ? "发票文件上传失败：" + saved.Message : "发票文件上传失败：存储服务未返回文件地址");
         // 当前为同步识别；旧异步插件使用的 ProviderRequestId/CallbackAt 留空。
         var upload = new FIN_Reimb_InvoiceUpload
         {
@@ -109,14 +118,22 @@ public sealed class ReimbursementInvoiceService : ServicesBase<FIN_Reimb_Invoice
         }
         catch (Exception ex)
         {
+            if (ex is not OperationCanceledException)
+                _logger.LogError(ex, "发票上传校验失败，UploadGuid={UploadGuid}，Stage={Stage}", upload.UploadGuid,
+                    upload.RecognitionStatus == 1 ? "Verify" : "Recognize");
             upload.RecognitionStatus = upload.RecognitionStatus == 1 ? (byte)1 : (byte)2;
             upload.VerifyStatus = upload.RecognitionStatus == 1 ? (byte)2 : (byte)0;
             upload.IsEffective = false;
             upload.FailureCode = ex is ReimbursementInvoiceAuthorizationException
                 ? "VERIFY_AUTHORIZATION_FAILED"
                 : upload.RecognitionStatus == 1 ? "VERIFY_FAILED" : "RECOGNITION_FAILED";
-            upload.FailureMessage = ex is ReimbursementInvoiceAuthorizationException
-                ? "百望云未授权查验该购方税号，请联系管理员" : "再次上传即可";
+            var stage = upload.RecognitionStatus == 1 ? "发票验真" : "发票识别";
+            var reason = ex is InvalidOperationException ? ex.Message : ex.GetBaseException().Message;
+            upload.FailureMessage = ex is OperationCanceledException ? stage + "已取消"
+                : string.IsNullOrWhiteSpace(reason) ? stage + "失败"
+                : ex is InvalidOperationException ? reason : stage + "失败：" + reason;
+            if (upload.FailureMessage.Length > 200)
+                upload.FailureMessage = upload.FailureMessage[..200];
             var changed = await Context.Updateable<FIN_Reimb_InvoiceUpload>()
                 .SetColumns(x => new FIN_Reimb_InvoiceUpload
                 {
@@ -134,7 +151,7 @@ public sealed class ReimbursementInvoiceService : ServicesBase<FIN_Reimb_Invoice
             if (ex is OperationCanceledException or
                 InvalidOperationException { Message: "PDF 包含多张不同发票，请逐张上传" })
                 throw;
-            return MapUpload(upload);
+            return await MapUploadWithSupplementAsync(upload);
         }
 
         upload.TotalAmount = verified.TotalAmount;
@@ -153,7 +170,8 @@ public sealed class ReimbursementInvoiceService : ServicesBase<FIN_Reimb_Invoice
             upload.DuplicateCheckStatus = occupied || duplicate ? (byte)2 : (byte)1;
             upload.IsEffective = !occupied && !duplicate;
             upload.FailureCode = upload.IsEffective ? null! : "INVOICE_DUPLICATE";
-            upload.FailureMessage = upload.IsEffective ? null! : "再次上传即可";
+            upload.FailureMessage = occupied ? "该发票已在企业发票池中，不能重复使用"
+                : duplicate ? "该发票号码已有有效上传记录，不能重复上传" : null!;
             var changed = await Context.Updateable<FIN_Reimb_InvoiceUpload>()
                 .SetColumns(x => new FIN_Reimb_InvoiceUpload
                 {
@@ -177,7 +195,31 @@ public sealed class ReimbursementInvoiceService : ServicesBase<FIN_Reimb_Invoice
             await Context.Ado.RollbackTranAsync();
             throw;
         }
-        return MapUpload(upload);
+        if (request.UploadPurpose == InvoiceUploadPurpose.Supplement && upload.IsEffective)
+            await _write.SupplementAsync(request.ApplyGuid!.Value, new SupplementInvoiceRequest
+            {
+                UploadGuids = new List<Guid> { upload.UploadGuid },
+                IdempotencyKey = upload.UploadGuid.ToString("N")
+            }, cancellationToken);
+        return await MapUploadWithSupplementAsync(upload);
+    }
+
+    private async Task<InvoiceUploadDto> MapUploadWithSupplementAsync(FIN_Reimb_InvoiceUpload upload)
+    {
+        var result = MapUpload(upload);
+        if (upload.UploadPurpose != (byte)InvoiceUploadPurpose.Supplement || !upload.ApplyGuid.HasValue)
+            return result;
+        var applyGuid = upload.ApplyGuid.Value;
+        var apply = await Context.Queryable<FIN_Reimb_Apply>()
+            .FirstAsync(x => x.CompanyId == upload.CompanyId && x.ApplicantId == _user.UserID &&
+                             x.ApplyGuid == applyGuid);
+        if (apply is not null)
+        {
+            result.CumulativeInvoiceTotalAmount = apply.InvoiceTotalAmount;
+            result.RemainingInvoiceAmount = Math.Max(0, apply.ApplyAmount - apply.InvoiceTotalAmount);
+            result.InvoiceSupplementStatus = (InvoiceSupplementStatus)apply.InvoiceSupplementStatus;
+        }
+        return result;
     }
 
     /// <summary>按企业从字典扩展服务读取申请表单选项。</summary>

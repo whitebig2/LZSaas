@@ -24,7 +24,7 @@ public sealed class ReimbursementIntegrationController : ReimbursementController
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>打款单信息。</returns>
     [HttpPost]
-    [Authorize(AuthenticationSchemes = "Authorization-Token")]
+    //[Authorize(AuthenticationSchemes = "Authorization-Token")]
     [PlatformLimit(PlatformType.MiniAdmin)]
     public async Task<IActionResult> CompletePayment(Guid applyGuid, [FromBody] CompletePaymentRequest request,
         CancellationToken cancellationToken)

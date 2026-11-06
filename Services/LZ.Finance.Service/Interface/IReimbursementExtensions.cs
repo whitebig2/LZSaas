@@ -2,19 +2,19 @@ using LZ.Model.Dtos.Reimbursement;
 
 namespace LZ.Finance.Service.Interface;
 
-// 外部能力尚未确定实现方；接入时实现接口并按项目的依赖注入规则注册即可。
 public interface IReimbursementBudgetProvider
 {
-    /// <summary>同一申请号和金额重复调用返回既有结果且不重复锁款；金额或成本类型变化时，原预留释放后重新校验。失败抛异常，不返回预算不足。</summary>
+    /// <summary>按老预算池校验并预留；同一请求号重试不得重复锁款。失败抛异常，余额不足返回预算外。</summary>
     /// <param name="companyId">企业 ID。</param>
     /// <param name="userId">申请人 ID。</param>
-    /// <param name="applyNo">申请单号，作为外部幂等请求号。</param>
+    /// <param name="externalRequestNo">由申请 GUID 生成的稳定幂等请求号。</param>
     /// <param name="costTypeId">成本类型 ID。</param>
+    /// <param name="expenseName">老预算池的费用名称。</param>
     /// <param name="amount">申请金额。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>是否预算内、是否预留及预算快照。</returns>
-    Task<BudgetDecision> CheckAndReserveAsync(int companyId, int userId, string applyNo,
-        int costTypeId, decimal amount, CancellationToken cancellationToken);
+    Task<BudgetDecision> CheckAndReserveAsync(int companyId, int userId, string externalRequestNo,
+        int costTypeId, string expenseName, decimal amount, CancellationToken cancellationToken);
     /// <summary>将已预留金额转为已用；重复确认不重复扣减，未预留或已释放时抛异常。</summary>
     /// <param name="externalRequestNo">预留时使用的外部请求号。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>

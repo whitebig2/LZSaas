@@ -20,19 +20,19 @@ public sealed class ApprovalController : ReimbursementControllerBase
     /// <param name="approval">审批配置、查询和决策服务。</param>
     public ApprovalController(IApprovalService approval) => _approvalSvc = approval;
 
-    /// <summary>查询当前企业已发布的审批流程及节点。</summary>
+    /// <summary>查询当前企业已发布的报销及付款审批流程与节点。</summary>
     /// <param name="cancellationToken">请求取消令牌。</param>
-    /// <returns>生效流程；无配置时返回 404。</returns>
+    /// <returns>按申请类型区分的生效流程；两种类型均未配置时返回 404。</returns>
     [HttpGet("approval-process/active")]
     public Task<IActionResult> GetActive(CancellationToken cancellationToken) =>
         ExecuteAsync(async () =>
         {
             var process = await _approvalSvc.GetActiveProcessAsync(cancellationToken);
-            return process is null ? NotFound("当前企业尚未配置审核流程") : ToCamelCase(Ok(process));
+            return process is null ? NotFound("当前企业尚未配置报销或付款审核流程") : ToCamelCase(Ok(process));
         });
 
     /// <summary>保存并发布分后台审批流程配置。</summary>
-    /// <param name="request">流程和审批节点配置。</param>
+    /// <param name="request">申请类型、流程和审批节点配置。</param>
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>发布后的流程。</returns>
     [HttpPut("approval-process/save")]
@@ -52,7 +52,7 @@ public sealed class ApprovalController : ReimbursementControllerBase
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>审批详情；无数据时返回 404。</returns>
     [HttpGet("approval/applications/{applyGuid}")]
-    public Task<IActionResult> GetDetail([FromRoute]Guid applyGuid, CancellationToken cancellationToken) =>
+    public Task<IActionResult> GetDetail([FromRoute] Guid applyGuid, CancellationToken cancellationToken) =>
         ExecuteAsync(async () =>
         {
             var detail = await _approvalSvc.GetDetailAsync(applyGuid, cancellationToken);
@@ -65,13 +65,15 @@ public sealed class ApprovalController : ReimbursementControllerBase
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>审批操作结果。</returns>
     [HttpPost("applications/{applyGuid}/approve")]
-    public Task<IActionResult> Approve([FromRoute]Guid applyGuid, [FromBody] ApprovalApproveRequest request,
-        CancellationToken cancellationToken) =>
-        ExecuteAsync(async () =>
-        {
-            await _approvalSvc.ApproveAsync(applyGuid, request, cancellationToken);
-            return Ok();
-        });
+    public Task<IActionResult> Approve([FromRoute] Guid applyGuid, [FromBody] ApprovalApproveRequest? request, CancellationToken cancellationToken)
+    {
+        request ??= new ApprovalApproveRequest();
+        return ExecuteAsync(async () =>
+          {
+              await _approvalSvc.ApproveAsync(applyGuid, request, cancellationToken);
+              return Ok();
+          });
+    }
 
     /// <summary>驳回当前节点并将申请置为审核退回。</summary>
     /// <param name="applyGuid">申请 GUID。</param>
@@ -79,7 +81,7 @@ public sealed class ApprovalController : ReimbursementControllerBase
     /// <param name="cancellationToken">请求取消令牌。</param>
     /// <returns>审批操作结果。</returns>
     [HttpPost("applications/{applyGuid}/reject")]
-    public Task<IActionResult> Reject([FromRoute]Guid applyGuid, [FromBody] ApprovalRejectRequest request,
+    public Task<IActionResult> Reject([FromRoute] Guid applyGuid, [FromBody] ApprovalRejectRequest request,
         CancellationToken cancellationToken) =>
         ExecuteAsync(async () =>
         {
@@ -91,7 +93,7 @@ public sealed class ApprovalController : ReimbursementControllerBase
     /// <param name="partnerGid">部门或伙伴 GUID。</param>
     /// <returns>审批人列表。</returns>
     [HttpGet("approvals/{partnerGid}")]
-    public async Task<IActionResult> GetApprovalAsync([FromRoute]Guid partnerGid)
+    public async Task<IActionResult> GetApprovalAsync([FromRoute] Guid partnerGid)
     {
         var approvers = await _approvalSvc.GetApproversAsync(partnerGid);
         return ToCamelCase(Ok(approvers));

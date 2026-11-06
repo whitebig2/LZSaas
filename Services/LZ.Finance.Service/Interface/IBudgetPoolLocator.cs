@@ -5,6 +5,6 @@ namespace LZ.Finance.Service.Interface;
 
 public interface IBudgetPoolLocator
 {
-    Task<FIN_Reimb_BudgetManage> LocateAsync(ISqlSugarClient finance, int companyId,
-        int userId, int costTypeId, DateTime now, CancellationToken cancellationToken);
+    Task<Live_BudgetManage> LocateAsync(ISqlSugarClient main, int companyId,
+        int userId, int costTypeId, string expenseName, DateTime now, CancellationToken cancellationToken);
 }

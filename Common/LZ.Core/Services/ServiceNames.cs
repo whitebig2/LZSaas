@@ -57,5 +57,9 @@ namespace LZ.Core.Services
         /// 统计服务
         /// </summary>
         public static string StatisticsService = "StatisticsService";
+        /// <summary>
+        /// 发票服务
+        /// </summary>
+        public static string InvoiceService = "InvoiceService"; 
     }
 }
